@@ -1,19 +1,21 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MessageSquare, Mic, FileImage, Flag, BarChart4, SendHorizontal } from 'lucide-react';
 import ComplaintsList from '@/components/complaints/ComplaintsList';
 import { toast } from 'sonner';
+import { useUserRole } from '@/hooks/useUserRole';
 
 const Complaints = () => {
+  const navigate = useNavigate();
+  const { userRole, isLoading } = useUserRole();
   const [activeTab, setActiveTab] = useState('text');
   const [category, setCategory] = useState('');
   const [priority, setPriority] = useState('');
@@ -29,6 +31,13 @@ const Complaints = () => {
     { id: 2, category: 'energy', priority: 'medium', content: 'Frequent power cuts in the evening hours', source: 'text', status: 'in-progress', date: '2023-06-16' },
     { id: 3, category: 'water', priority: 'low', content: 'Water pressure is very low in our area', source: 'voice', status: 'resolved', date: '2023-06-10' },
   ]);
+
+  useEffect(() => {
+    // Redirect admins to admin dashboard
+    if (!isLoading && userRole && userRole !== 'citizen') {
+      navigate('/admin');
+    }
+  }, [userRole, isLoading, navigate]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
@@ -124,6 +133,17 @@ const Complaints = () => {
     
     toast.success('Complaint submitted successfully!');
   };
+
+  // Only render for citizens
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-screen">
+          <p>Loading...</p>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>

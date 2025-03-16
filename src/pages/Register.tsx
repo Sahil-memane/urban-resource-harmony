@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Eye, EyeOff, UserPlus } from 'lucide-react';
+import { useUserRole } from '@/hooks/useUserRole';
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -17,6 +18,7 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { setRole } = useUserRole();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,11 +31,14 @@ const Register = () => {
     setIsLoading(true);
 
     try {
-      // In a real app, this would be a fetch request to your backend
+      // In a real app, this would be a fetch request to your Supabase backend
       // For demo purposes, we'll just simulate a successful registration
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      // Set token and user role (citizens only for registration)
       localStorage.setItem('janhit-token', 'mock-token');
+      setRole('citizen');
+      
       toast.success('Account created successfully');
       navigate('/');
     } catch (error) {
@@ -97,7 +102,7 @@ const Register = () => {
                 </span>
               </div>
             </Link>
-            <h1 className="mt-6 text-2xl font-semibold text-gray-900 dark:text-white">Create an account</h1>
+            <h1 className="mt-6 text-2xl font-semibold text-gray-900 dark:text-white">Create a Citizen Account</h1>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
               Join JanHitConnect to access smart governance features
             </p>

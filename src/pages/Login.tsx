@@ -8,26 +8,63 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useUserRole } from '@/hooks/useUserRole';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [userType, setUserType] = useState('citizen');
   const navigate = useNavigate();
+  const { setRole } = useUserRole();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // In a real app, this would be a fetch request to your backend
+      // In a real app, this would be a fetch request to your Supabase backend
       // For demo purposes, we'll just simulate a successful login
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      // Set token and user role
       localStorage.setItem('janhit-token', 'mock-token');
-      toast.success('Successfully logged in');
-      navigate('/');
+      
+      // Process user role
+      let redirectPath = '/';
+      
+      // Set different roles based on selection and demo credentials
+      if (userType === 'admin') {
+        // Demo admin login - email determines admin type
+        if (email.includes('water')) {
+          setRole('water-admin');
+          toast.success('Logged in as Water Department Admin');
+          redirectPath = '/admin';
+        } else if (email.includes('energy')) {
+          setRole('energy-admin');
+          toast.success('Logged in as Energy Department Admin');
+          redirectPath = '/admin';
+        } else {
+          // Default to super admin for other admin emails
+          setRole('super-admin');
+          toast.success('Logged in as Super Admin');
+          redirectPath = '/admin';
+        }
+      } else {
+        // Regular citizen
+        setRole('citizen');
+        toast.success('Successfully logged in as Citizen');
+      }
+      
+      navigate(redirectPath);
     } catch (error) {
       toast.error('Login failed. Please check your credentials and try again.');
     } finally {
@@ -96,6 +133,29 @@ const Login = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="userType" className="text-sm font-medium">
+                Login As
+              </Label>
+              <Select
+                value={userType}
+                onValueChange={setUserType}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select user type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="citizen">Citizen</SelectItem>
+                  <SelectItem value="admin">Government Admin</SelectItem>
+                </SelectContent>
+              </Select>
+              {userType === 'admin' && (
+                <p className="text-xs text-muted-foreground">
+                  Demo: For Water Admin use email with "water", for Energy Admin use email with "energy"
+                </p>
+              )}
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium">
                 Email
