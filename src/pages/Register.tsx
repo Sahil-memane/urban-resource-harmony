@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Eye, EyeOff, UserPlus } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
+import { supabase } from '@/integrations/supabase/client';
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -18,7 +19,18 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { setRole } = useUserRole();
+  const { userRole } = useUserRole();
+
+  // If already logged in, redirect to appropriate page
+  useEffect(() => {
+    if (userRole) {
+      if (userRole === 'citizen') {
+        navigate('/');
+      } else {
+        navigate('/admin');
+      }
+    }
+  }, [userRole, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,18 +43,27 @@ const Register = () => {
     setIsLoading(true);
 
     try {
-      // In a real app, this would be a fetch request to your Supabase backend
-      // For demo purposes, we'll just simulate a successful registration
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Register new user with Supabase
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            role: 'citizen', // Default role for new registrations
+          }
+        }
+      });
+
+      if (error) throw error;
       
-      // Set token and user role (citizens only for registration)
-      localStorage.setItem('janhit-token', 'mock-token');
-      setRole('citizen');
-      
-      toast.success('Account created successfully');
-      navigate('/');
-    } catch (error) {
-      toast.error('Registration failed. Please try again.');
+      if (data.user) {
+        toast.success('Account created successfully! Please check your email for verification.');
+        navigate('/');
+      }
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      toast.error(error.message || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }

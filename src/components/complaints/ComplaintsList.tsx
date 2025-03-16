@@ -3,15 +3,17 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Droplet, Zap, MessageSquare, Mic, FileImage, Clock } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 
 type Complaint = {
-  id: number;
+  id: string;
   category: string;
   priority: string;
   content: string;
   source: string;
   status: string;
   date: string;
+  response?: string;
 };
 
 interface ComplaintsListProps {
@@ -91,6 +93,15 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ complaints }) => {
     );
   };
 
+  // Function to format dates
+  const formatDate = (dateString: string) => {
+    try {
+      return format(parseISO(dateString), 'MMM dd, yyyy');
+    } catch (error) {
+      return dateString;
+    }
+  };
+
   return (
     <div className="overflow-x-auto">
       {complaints.length === 0 ? (
@@ -130,7 +141,7 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ complaints }) => {
                 <TableCell className="hidden sm:table-cell whitespace-nowrap">
                   <div className="flex items-center gap-1.5">
                     <Clock size={14} className="opacity-70" />
-                    {complaint.date}
+                    {formatDate(complaint.date)}
                   </div>
                 </TableCell>
               </TableRow>

@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 // Define the possible user roles
 type UserRole = 'citizen' | 'water-admin' | 'energy-admin' | 'super-admin' | null;
@@ -10,30 +11,43 @@ export const useUserRole = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // This is a mock implementation - in production this would check Supabase auth
     const checkUserRole = async () => {
       try {
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Check if user is logged in
-        const token = localStorage.getItem('janhit-token');
+        setIsLoading(true);
         
-        if (!token) {
+        // Get the current session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          throw sessionError;
+        }
+        
+        if (!session) {
           setUserRole(null);
-          setIsLoading(false);
           return;
         }
-
-        // In production, you would get the role from Supabase
-        // For now, we'll mock it based on a value in localStorage
-        const role = localStorage.getItem('janhit-user-role');
         
-        if (role === 'water-admin' || role === 'energy-admin' || role === 'super-admin') {
-          setUserRole(role as UserRole);
+        // Get the user's profile with role information
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profileError) {
+          throw profileError;
+        }
+        
+        // Set the role
+        if (profile && (
+          profile.role === 'citizen' || 
+          profile.role === 'water-admin' || 
+          profile.role === 'energy-admin' || 
+          profile.role === 'super-admin'
+        )) {
+          setUserRole(profile.role as UserRole);
         } else {
-          // Default role for logged in users
-          setUserRole('citizen');
+          setUserRole('citizen'); // Default role
         }
       } catch (error) {
         console.error('Error checking user role:', error);
@@ -44,17 +58,49 @@ export const useUserRole = () => {
       }
     };
 
+    // Initial check
     checkUserRole();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        checkUserRole();
+      } else {
+        setUserRole(null);
+        setIsLoading(false);
+      }
+    });
+
+    // Clean up subscription on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Function to set user role (would be called after login)
-  const setRole = (role: UserRole) => {
-    if (role) {
-      localStorage.setItem('janhit-user-role', role);
-    } else {
-      localStorage.removeItem('janhit-user-role');
+  const setRole = async (role: UserRole) => {
+    if (!role) {
+      setUserRole(null);
+      return;
     }
-    setUserRole(role);
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ role })
+          .eq('id', session.user.id);
+          
+        if (error) throw error;
+      }
+      
+      setUserRole(role);
+    } catch (error) {
+      console.error('Error updating role:', error);
+      toast.error('Failed to update role');
+    }
   };
 
   return { userRole, isLoading, setRole };

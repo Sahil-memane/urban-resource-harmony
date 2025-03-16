@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useUserRole } from '@/hooks/useUserRole';
+import { supabase } from '@/integrations/supabase/client';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -24,49 +25,57 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [userType, setUserType] = useState('citizen');
   const navigate = useNavigate();
-  const { setRole } = useUserRole();
+  const { userRole } = useUserRole();
+
+  // If already logged in, redirect to appropriate page
+  useEffect(() => {
+    if (userRole) {
+      if (userRole === 'citizen') {
+        navigate('/');
+      } else {
+        navigate('/admin');
+      }
+    }
+  }, [userRole, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // In a real app, this would be a fetch request to your Supabase backend
-      // For demo purposes, we'll just simulate a successful login
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Set token and user role
-      localStorage.setItem('janhit-token', 'mock-token');
-      
-      // Process user role
-      let redirectPath = '/';
-      
-      // Set different roles based on selection and demo credentials
-      if (userType === 'admin') {
-        // Demo admin login - email determines admin type
-        if (email.includes('water')) {
-          setRole('water-admin');
-          toast.success('Logged in as Water Department Admin');
-          redirectPath = '/admin';
-        } else if (email.includes('energy')) {
-          setRole('energy-admin');
-          toast.success('Logged in as Energy Department Admin');
-          redirectPath = '/admin';
+      // Sign in with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        // Get user profile to determine role
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profileError) throw profileError;
+
+        // Handle login based on user role
+        if (profile.role === 'citizen') {
+          toast.success('Successfully logged in as Citizen');
+          navigate('/');
+        } else if (profile.role === 'water-admin' || profile.role === 'energy-admin' || profile.role === 'super-admin') {
+          toast.success(`Logged in as ${profile.role}`);
+          navigate('/admin');
         } else {
-          // Default to super admin for other admin emails
-          setRole('super-admin');
-          toast.success('Logged in as Super Admin');
-          redirectPath = '/admin';
+          toast.success('Successfully logged in');
+          navigate('/');
         }
-      } else {
-        // Regular citizen
-        setRole('citizen');
-        toast.success('Successfully logged in as Citizen');
       }
-      
-      navigate(redirectPath);
-    } catch (error) {
-      toast.error('Login failed. Please check your credentials and try again.');
+    } catch (error: any) {
+      console.error('Login error:', error);
+      toast.error(error.message || 'Login failed. Please check your credentials and try again.');
     } finally {
       setIsLoading(false);
     }

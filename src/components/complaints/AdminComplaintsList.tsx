@@ -3,26 +3,28 @@ import React, { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Droplet, Zap, MessageSquare, Mic, FileImage, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Droplet, Zap, MessageSquare, Mic, FileImage, Clock, CheckCircle } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 
 type Complaint = {
-  id: number;
+  id: string;
   category: string;
   priority: string;
   content: string;
   source: string;
   status: string;
   date: string;
-  userId: string;
+  user_id: string;
   response?: string;
-  resolvedDate?: string;
+  resolved_date?: string;
+  resolved_by?: string;
 };
 
 interface AdminComplaintsListProps {
   complaints: Complaint[];
-  onResolve?: (id: number, response: string) => void;
+  onResolve?: (id: string, response: string) => void;
   isResolved: boolean;
 }
 
@@ -103,6 +105,15 @@ const AdminComplaintsList: React.FC<AdminComplaintsListProps> = ({ complaints, o
     );
   };
 
+  // Function to format dates
+  const formatDate = (dateString: string) => {
+    try {
+      return format(parseISO(dateString), 'MMM dd, yyyy');
+    } catch (error) {
+      return dateString;
+    }
+  };
+
   const handleOpenResolveDialog = (complaint: Complaint) => {
     setSelectedComplaint(complaint);
     setResponse('');
@@ -152,7 +163,7 @@ const AdminComplaintsList: React.FC<AdminComplaintsListProps> = ({ complaints, o
               <TableCell className="hidden sm:table-cell whitespace-nowrap">
                 <div className="flex items-center gap-1.5">
                   <Clock size={14} className="opacity-70" />
-                  {complaint.date}
+                  {formatDate(isResolved && complaint.resolved_date ? complaint.resolved_date : complaint.date)}
                 </div>
               </TableCell>
               {isResolved && (

@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { 
   Home, 
@@ -12,11 +12,13 @@ import {
   LogIn, 
   LogOut,
   Moon,
-  Sun 
+  Sun,
+  User
 } from "lucide-react";
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useUserRole } from '@/hooks/useUserRole';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -26,27 +28,27 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const [isDarkMode, setIsDarkMode] = React.useState(false);
-  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const navigate = useNavigate();
+  const { userRole, isLoading } = useUserRole();
 
-  // Check if user is logged in from localStorage on mount
-  React.useEffect(() => {
-    const token = localStorage.getItem('janhit-token');
-    if (token) {
-      setIsLoggedIn(true);
-    }
-  }, []);
-
+  // Toggle dark mode
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode);
     document.documentElement.classList.toggle('dark');
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('janhit-token');
-    setIsLoggedIn(false);
-    toast.success('Successfully logged out');
-    navigate('/');
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      toast.success('Successfully logged out');
+      navigate('/');
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      toast.error(error.message || 'Error signing out');
+    }
   };
 
   return (
@@ -65,20 +67,26 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           <NavLink to="/" icon={<Home size={16} />} active={location.pathname === '/'}>
             Home
           </NavLink>
-          {isLoggedIn && (
+          {userRole && (
             <>
-              <NavLink to="/complaints" icon={<MessageSquare size={16} />} active={location.pathname === '/complaints'}>
+              <NavLink to="/complaints" icon={<MessageSquare size={16} />} active={location.pathname.includes('/complaints')}>
                 Complaints
               </NavLink>
-              <NavLink to="/water" icon={<Droplet size={16} />} active={location.pathname === '/water'}>
-                Water
-              </NavLink>
-              <NavLink to="/energy" icon={<Zap size={16} />} active={location.pathname === '/energy'}>
-                Energy
-              </NavLink>
-              <NavLink to="/analytics" icon={<BarChart4 size={16} />} active={location.pathname === '/analytics'}>
-                Analytics
-              </NavLink>
+              {(userRole === 'water-admin' || userRole === 'super-admin') && (
+                <NavLink to="/water" icon={<Droplet size={16} />} active={location.pathname === '/water'}>
+                  Water
+                </NavLink>
+              )}
+              {(userRole === 'energy-admin' || userRole === 'super-admin') && (
+                <NavLink to="/energy" icon={<Zap size={16} />} active={location.pathname === '/energy'}>
+                  Energy
+                </NavLink>
+              )}
+              {userRole !== 'citizen' && (
+                <NavLink to="/complaints/analytics" icon={<BarChart4 size={16} />} active={location.pathname === '/complaints/analytics'}>
+                  Analytics
+                </NavLink>
+              )}
             </>
           )}
           <NavLink to="/about" icon={<Info size={16} />} active={location.pathname === '/about'}>
@@ -94,14 +102,32 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           
-          {isLoggedIn ? (
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
-            >
-              <LogOut size={16} />
-              <span className="hidden sm:inline">Logout</span>
-            </button>
+          {isLoading ? (
+            <div className="w-9 h-9 flex items-center justify-center">
+              <svg className="animate-spin h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+          ) : userRole ? (
+            <div className="flex items-center gap-2">
+              {userRole !== 'citizen' && (
+                <Link
+                  to="/admin"
+                  className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 transition-colors mr-1"
+                >
+                  <User size={16} />
+                  <span className="hidden sm:inline">Admin</span>
+                </Link>
+              )}
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
+              >
+                <LogOut size={16} />
+                <span className="hidden sm:inline">Logout</span>
+              </button>
+            </div>
           ) : (
             <Link
               to="/login"
@@ -119,12 +145,18 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 py-2 px-4">
           <div className="flex justify-around">
             <MobileNavLink to="/" icon={<Home size={20} />} active={location.pathname === '/'} />
-            {isLoggedIn && (
+            {userRole && (
               <>
-                <MobileNavLink to="/complaints" icon={<MessageSquare size={20} />} active={location.pathname === '/complaints'} />
-                <MobileNavLink to="/water" icon={<Droplet size={20} />} active={location.pathname === '/water'} />
-                <MobileNavLink to="/energy" icon={<Zap size={20} />} active={location.pathname === '/energy'} />
-                <MobileNavLink to="/analytics" icon={<BarChart4 size={20} />} active={location.pathname === '/analytics'} />
+                <MobileNavLink to="/complaints" icon={<MessageSquare size={20} />} active={location.pathname.includes('/complaints')} />
+                {(userRole === 'water-admin' || userRole === 'super-admin') && (
+                  <MobileNavLink to="/water" icon={<Droplet size={20} />} active={location.pathname === '/water'} />
+                )}
+                {(userRole === 'energy-admin' || userRole === 'super-admin') && (
+                  <MobileNavLink to="/energy" icon={<Zap size={20} />} active={location.pathname === '/energy'} />
+                )}
+                {userRole !== 'citizen' && (
+                  <MobileNavLink to="/complaints/analytics" icon={<BarChart4 size={20} />} active={location.pathname === '/complaints/analytics'} />
+                )}
               </>
             )}
             <MobileNavLink to="/about" icon={<Info size={20} />} active={location.pathname === '/about'} />
