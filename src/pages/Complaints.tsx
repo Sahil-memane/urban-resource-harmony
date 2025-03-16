@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
@@ -7,37 +8,71 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MessageSquare, Mic, FileImage, Flag, BarChart4, SendHorizontal } from 'lucide-react';
+import { 
+  MessageSquare, 
+  Mic, 
+  FileImage, 
+  Flag, 
+  BarChart4, 
+  SendHorizontal,
+  Loader2,
+  AlertTriangle
+} from 'lucide-react';
 import ComplaintsList from '@/components/complaints/ComplaintsList';
 import { toast } from 'sonner';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
+import { uploadFile } from '@/utils/fileUpload';
+import Chatbot from '@/components/chatbot/Chatbot';
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_IMAGE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'application/pdf',
+];
+const ALLOWED_AUDIO_TYPES = [
+  'audio/mp3',
+  'audio/wav',
+  'audio/ogg',
+  'audio/mpeg',
+];
 
 const Complaints = () => {
   const navigate = useNavigate();
-  const { userRole, isLoading } = useUserRole();
+  const { userRole, isLoading: isRoleLoading } = useUserRole();
   const [activeTab, setActiveTab] = useState('text');
   const [category, setCategory] = useState('');
   const [priority, setPriority] = useState('');
   const [complaintText, setComplaintText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [complaints, setComplaints] = useState<any[]>([]);
+  const [isLoadingComplaints, setIsLoadingComplaints] = useState(true);
+  const [predictionLoading, setPredictionLoading] = useState(false);
   
-  const [complaints, setComplaints] = useState([
-    { id: "1", category: 'water', priority: 'high', content: 'Water supply has been irregular for the past week', source: 'text', status: 'pending', date: '2023-06-15' },
-    { id: "2", category: 'energy', priority: 'medium', content: 'Frequent power cuts in the evening hours', source: 'text', status: 'in-progress', date: '2023-06-16' },
-    { id: "3", category: 'water', priority: 'low', content: 'Water pressure is very low in our area', source: 'voice', status: 'resolved', date: '2023-06-10' },
-  ]);
-
+  // Media recording state
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  
+  // Speech recognition
+  const recognitionRef = useRef<any>(null);
+  const [transcription, setTranscription] = useState('');
+  
   const fetchComplaints = async () => {
     try {
+      setIsLoadingComplaints(true);
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
         console.log('No active session');
+        setIsLoadingComplaints(false);
         return;
       }
       
@@ -57,26 +92,44 @@ const Complaints = () => {
     } catch (error) {
       console.error('Error fetching complaints:', error);
       toast.error('Failed to load complaints');
+    } finally {
+      setIsLoadingComplaints(false);
     }
   };
 
   useEffect(() => {
-    if (!isLoading && userRole && userRole !== 'citizen') {
+    if (!isRoleLoading && userRole && userRole !== 'citizen') {
       navigate('/admin');
-    } else if (!isLoading && userRole === 'citizen') {
+    } else if (!isRoleLoading && userRole === 'citizen') {
       fetchComplaints();
     }
-  }, [userRole, isLoading, navigate]);
+  }, [userRole, isRoleLoading, navigate]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     setAudioUrl(null);
     setSelectedFile(null);
+    setAudioBlob(null);
+    setTranscription('');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      
+      // Validate file size
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(`File is too large. Maximum size is ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
+        return;
+      }
+      
+      // Validate file type
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        toast.error('File type not allowed. Please upload a valid image or PDF.');
+        return;
+      }
+      
+      setSelectedFile(file);
     }
   };
 
@@ -86,14 +139,114 @@ const Complaints = () => {
     }
   };
 
-  const toggleRecording = () => {
-    if (isRecording) {
-      setIsRecording(false);
-      setAudioUrl('recorded-audio-url.mp3');
-      toast.success('Voice recording saved!');
-    } else {
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      
+      mediaRecorderRef.current.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+      
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        setAudioBlob(audioBlob);
+        const audioUrl = URL.createObjectURL(audioBlob);
+        setAudioUrl(audioUrl);
+        
+        // Clean up the media stream
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      mediaRecorderRef.current.start();
       setIsRecording(true);
       toast.info('Recording started... Speak now');
+      
+      // Start speech recognition if available
+      try {
+        // @ts-ignore - Speech recognition API not in TypeScript defs
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+          recognitionRef.current = new SpeechRecognition();
+          recognitionRef.current.continuous = true;
+          recognitionRef.current.interimResults = true;
+          recognitionRef.current.lang = 'en-US';
+          
+          recognitionRef.current.onresult = (event: any) => {
+            let interimTranscript = '';
+            let finalTranscript = '';
+            
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+              if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript;
+              } else {
+                interimTranscript += event.results[i][0].transcript;
+              }
+            }
+            
+            setTranscription(finalTranscript || interimTranscript);
+          };
+          
+          recognitionRef.current.start();
+        }
+      } catch (err) {
+        console.error('Speech recognition not supported', err);
+      }
+      
+    } catch (err) {
+      console.error('Error accessing microphone:', err);
+      toast.error('Could not access your microphone. Please check permissions.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      
+      // Stop speech recognition if active
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      
+      toast.success('Voice recording saved!');
+    }
+  };
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
+  const getPriorityFromAI = async (text: string) => {
+    try {
+      setPredictionLoading(true);
+      
+      const { data, error } = await supabase.functions.invoke('ai-priority', {
+        body: { complaintText: text, category }
+      });
+      
+      if (error) throw error;
+      
+      if (data && data.priority) {
+        setPriority(data.priority);
+        toast.success(`AI has set priority to: ${data.priority}`);
+        return data.priority;
+      } else {
+        throw new Error('No priority returned from AI');
+      }
+    } catch (error) {
+      console.error('Error getting AI priority:', error);
+      toast.error('Could not determine priority automatically. Please select manually.');
+      return null;
+    } finally {
+      setPredictionLoading(false);
     }
   };
 
@@ -105,13 +258,9 @@ const Complaints = () => {
       return;
     }
     
-    if (!priority) {
-      toast.error('Please select a priority');
-      return;
-    }
-    
     let content = '';
     let source = activeTab;
+    let fileUrl = null;
     
     switch (activeTab) {
       case 'text':
@@ -122,18 +271,23 @@ const Complaints = () => {
         content = complaintText;
         break;
       case 'voice':
-        if (!audioUrl) {
+        if (!audioBlob) {
           toast.error('Please record your voice first');
           return;
         }
-        content = 'Voice complaint recorded';
+        
+        if (transcription) {
+          content = transcription;
+        } else {
+          content = 'Voice complaint recorded (no transcription available)';
+        }
         break;
       case 'image':
         if (!selectedFile) {
           toast.error('Please upload an image or document');
           return;
         }
-        content = `File uploaded: ${selectedFile.name}`;
+        content = selectedFile.name;
         break;
     }
     
@@ -144,19 +298,42 @@ const Complaints = () => {
       
       if (!session) {
         toast.error('You must be logged in to submit a complaint');
+        navigate('/login');
         return;
       }
       
+      // Determine priority using AI if not manually set
+      let determinedPriority = priority;
+      if (!determinedPriority) {
+        const aiPriority = await getPriorityFromAI(content);
+        if (aiPriority) {
+          determinedPriority = aiPriority;
+        } else {
+          determinedPriority = 'medium'; // Default fallback
+        }
+      }
+      
+      // Handle file uploads
+      if (activeTab === 'voice' && audioBlob) {
+        // Convert blob to file
+        const audioFile = new File([audioBlob], 'voice-recording.wav', { type: 'audio/wav' });
+        fileUrl = await uploadFile(audioFile, 'audio');
+      } else if (activeTab === 'image' && selectedFile) {
+        fileUrl = await uploadFile(selectedFile, 'image');
+      }
+      
+      // Create the complaint
       const { data, error } = await supabase
         .from('complaints')
         .insert([
           {
             user_id: session.user.id,
             category,
-            priority,
+            priority: determinedPriority,
             content,
             source,
             status: 'pending',
+            ...(fileUrl && { attachment_url: fileUrl })
           }
         ])
         .select();
@@ -166,18 +343,20 @@ const Complaints = () => {
       }
       
       if (data && data.length > 0) {
-        setComplaints([data[0], ...complaints]);
+        toast.success('Complaint submitted successfully!');
+        
+        // Reset form
+        setComplaintText('');
+        setCategory('');
+        setPriority('');
+        setAudioUrl(null);
+        setAudioBlob(null);
+        setSelectedFile(null);
+        setTranscription('');
+        
+        // Refresh complaints list
+        fetchComplaints();
       }
-      
-      setComplaintText('');
-      setCategory('');
-      setPriority('');
-      setAudioUrl(null);
-      setSelectedFile(null);
-      
-      toast.success('Complaint submitted successfully!');
-      
-      fetchComplaints();
     } catch (error) {
       console.error('Error submitting complaint:', error);
       toast.error('Failed to submit complaint');
@@ -186,11 +365,12 @@ const Complaints = () => {
     }
   };
 
-  if (isLoading) {
+  if (isRoleLoading) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center h-screen">
-          <p>Loading...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="ml-2">Loading...</p>
         </div>
       </MainLayout>
     );
@@ -233,17 +413,35 @@ const Complaints = () => {
                     </div>
                     
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Priority</label>
-                      <Select value={priority} onValueChange={setPriority}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select priority" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="low">Low</SelectItem>
-                          <SelectItem value="medium">Medium</SelectItem>
-                          <SelectItem value="high">High</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex justify-between items-center">
+                        <label className="text-sm font-medium">Priority</label>
+                        {predictionLoading && (
+                          <div className="flex items-center text-xs text-muted-foreground">
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            AI determining priority...
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="relative">
+                        <Select 
+                          value={priority} 
+                          onValueChange={setPriority}
+                          disabled={predictionLoading}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="AI will determine priority" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          AI will automatically determine priority based on your complaint
+                        </div>
+                      </div>
                     </div>
                     
                     <div className="space-y-2">
@@ -288,10 +486,23 @@ const Complaints = () => {
                               <Mic className="mr-2 h-4 w-4" />
                               {isRecording ? 'Stop Recording' : 'Start Recording'}
                             </Button>
+                            
                             {audioUrl && (
                               <div className="mt-4 w-full">
                                 <p className="text-sm text-center mb-2">Recording saved</p>
-                                {/* In a real app, you would display an audio player here */}
+                                <audio controls className="w-full">
+                                  <source src={audioUrl} type="audio/wav" />
+                                  Your browser does not support audio playback.
+                                </audio>
+                              </div>
+                            )}
+                            
+                            {transcription && (
+                              <div className="mt-4 w-full">
+                                <p className="text-sm font-medium mb-1">Transcription:</p>
+                                <div className="p-3 bg-muted rounded">
+                                  <p className="text-sm">{transcription}</p>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -302,7 +513,7 @@ const Complaints = () => {
                             <input
                               ref={fileInputRef}
                               type="file"
-                              accept="image/*, application/pdf"
+                              accept={ALLOWED_IMAGE_TYPES.join(',')}
                               className="hidden"
                               onChange={handleFileChange}
                             />
@@ -315,9 +526,21 @@ const Complaints = () => {
                               <FileImage className="mr-2 h-4 w-4" />
                               Browse Files
                             </Button>
+                            <p className="text-xs text-muted-foreground">
+                              Max file size: 10MB. Accepted formats: JPG, PNG, GIF, WEBP, PDF
+                            </p>
                             {selectedFile && (
                               <div className="mt-4">
                                 <p className="text-sm text-center">{selectedFile.name}</p>
+                                {selectedFile.type.startsWith('image/') && (
+                                  <div className="mt-2 max-h-[150px] overflow-hidden rounded">
+                                    <img 
+                                      src={URL.createObjectURL(selectedFile)} 
+                                      alt="Preview" 
+                                      className="max-h-[150px] object-contain"
+                                    />
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -332,10 +555,13 @@ const Complaints = () => {
                   type="submit" 
                   className="w-full" 
                   onClick={handleSubmit}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !category}
                 >
                   {isSubmitting ? (
-                    'Submitting...'
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Submitting...
+                    </>
                   ) : (
                     <>
                       <SendHorizontal className="mr-2 h-4 w-4" />
@@ -362,12 +588,29 @@ const Complaints = () => {
                 </Button>
               </CardHeader>
               <CardContent className="flex-1 overflow-auto">
-                <ComplaintsList complaints={complaints} />
+                {isLoadingComplaints ? (
+                  <div className="flex justify-center items-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : complaints.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Flag className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium">No complaints yet</h3>
+                    <p className="text-muted-foreground mt-1 max-w-xs">
+                      Submit your first complaint using the form to start tracking it here.
+                    </p>
+                  </div>
+                ) : (
+                  <ComplaintsList complaints={complaints} />
+                )}
               </CardContent>
             </Card>
           </div>
         </div>
       </motion.div>
+      
+      {/* Chatbot */}
+      <Chatbot />
     </MainLayout>
   );
 };

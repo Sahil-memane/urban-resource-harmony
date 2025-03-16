@@ -16,6 +16,9 @@ import Complaints from "./pages/Complaints";
 import ComplaintsAnalytics from "./pages/ComplaintsAnalytics";
 import AdminDashboard from "./pages/AdminDashboard";
 
+// Components
+import Chatbot from "./components/chatbot/Chatbot";
+
 const queryClient = new QueryClient();
 
 const App = () => (

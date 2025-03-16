@@ -2,8 +2,10 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Droplet, Zap, MessageSquare, Mic, FileImage, Clock } from 'lucide-react';
+import { Droplet, Zap, MessageSquare, Mic, FileImage, Clock, ExternalLink, AlertCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type Complaint = {
   id: string;
@@ -14,6 +16,7 @@ type Complaint = {
   status: string;
   date: string;
   response?: string;
+  attachment_url?: string;
 };
 
 interface ComplaintsListProps {
@@ -21,6 +24,9 @@ interface ComplaintsListProps {
 }
 
 const ComplaintsList: React.FC<ComplaintsListProps> = ({ complaints }) => {
+  const [selectedComplaint, setSelectedComplaint] = React.useState<Complaint | null>(null);
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+
   // Function to render the category icon
   const renderCategoryIcon = (category: string) => {
     switch (category) {
@@ -102,6 +108,64 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ complaints }) => {
     }
   };
 
+  // Function to open complaint details dialog
+  const openComplaintDetails = (complaint: Complaint) => {
+    setSelectedComplaint(complaint);
+    setDialogOpen(true);
+  };
+
+  // Function to render attachment based on source type
+  const renderAttachment = (complaint: Complaint) => {
+    if (!complaint.attachment_url) return null;
+    
+    const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(complaint.attachment_url);
+    const isAudio = /\.(mp3|wav|ogg)$/i.test(complaint.attachment_url);
+    const isPdf = /\.pdf$/i.test(complaint.attachment_url);
+    
+    if (isImage) {
+      return (
+        <div className="mt-4 rounded-md overflow-hidden border">
+          <img 
+            src={complaint.attachment_url} 
+            alt="Attachment" 
+            className="max-w-full h-auto max-h-[300px] object-contain mx-auto"
+          />
+        </div>
+      );
+    } else if (isAudio) {
+      return (
+        <div className="mt-4">
+          <audio controls className="w-full">
+            <source src={complaint.attachment_url} />
+            Your browser does not support audio playback.
+          </audio>
+        </div>
+      );
+    } else if (isPdf) {
+      return (
+        <div className="mt-4 flex justify-center">
+          <Button asChild variant="outline" size="sm">
+            <a href={complaint.attachment_url} target="_blank" rel="noopener noreferrer">
+              <FileImage className="mr-2 h-4 w-4" />
+              View PDF Document
+            </a>
+          </Button>
+        </div>
+      );
+    } else {
+      return (
+        <div className="mt-4 flex justify-center">
+          <Button asChild variant="outline" size="sm">
+            <a href={complaint.attachment_url} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Open Attachment
+            </a>
+          </Button>
+        </div>
+      );
+    }
+  };
+
   return (
     <div className="overflow-x-auto">
       {complaints.length === 0 ? (
@@ -118,6 +182,7 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ complaints }) => {
               <TableHead className="hidden sm:table-cell">Source</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="hidden sm:table-cell">Date</TableHead>
+              <TableHead className="text-right">Details</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -144,11 +209,96 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ complaints }) => {
                     {formatDate(complaint.date)}
                   </div>
                 </TableCell>
+                <TableCell className="text-right">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 w-8 p-0"
+                    onClick={() => openComplaintDetails(complaint)}
+                  >
+                    <span className="sr-only">Show details</span>
+                    <ExternalLink size={16} />
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       )}
+
+      {/* Complaint Details Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedComplaint && (
+                <>
+                  {renderCategoryIcon(selectedComplaint.category)}
+                  <span className="capitalize">{selectedComplaint?.category} Complaint</span>
+                </>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedComplaint && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Priority</p>
+                  <div className="mt-1">{renderPriorityBadge(selectedComplaint.priority)}</div>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <div className="mt-1">{renderStatusBadge(selectedComplaint.status)}</div>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Source</p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    {renderSourceIcon(selectedComplaint.source)}
+                    <span className="capitalize">{selectedComplaint.source}</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Date Submitted</p>
+                  <p className="mt-1">{formatDate(selectedComplaint.date)}</p>
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-sm text-muted-foreground">Description</p>
+                <div className="mt-1 p-3 bg-muted rounded-md">
+                  <p>{selectedComplaint.content}</p>
+                </div>
+              </div>
+              
+              {selectedComplaint.attachment_url && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Attachment</p>
+                  {renderAttachment(selectedComplaint)}
+                </div>
+              )}
+              
+              {selectedComplaint.response && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Response</p>
+                  <div className="mt-1 p-3 bg-muted rounded-md">
+                    <p>{selectedComplaint.response}</p>
+                  </div>
+                </div>
+              )}
+              
+              {selectedComplaint.status === 'pending' && (
+                <div className="flex items-center gap-2 p-3 bg-yellow-50 dark:bg-yellow-950/30 rounded-md">
+                  <AlertCircle size={16} className="text-yellow-500" />
+                  <p className="text-sm text-yellow-800 dark:text-yellow-400">
+                    Your complaint is pending review by our team.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
