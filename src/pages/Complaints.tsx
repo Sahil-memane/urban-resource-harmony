@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
@@ -12,6 +11,7 @@ import { MessageSquare, Mic, FileImage, Flag, BarChart4, SendHorizontal } from '
 import ComplaintsList from '@/components/complaints/ComplaintsList';
 import { toast } from 'sonner';
 import { useUserRole } from '@/hooks/useUserRole';
+import { supabase } from '@/integrations/supabase/client';
 
 const Complaints = () => {
   const navigate = useNavigate();
@@ -24,18 +24,47 @@ const Complaints = () => {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Mock complaints for demonstration
   const [complaints, setComplaints] = useState([
-    { id: 1, category: 'water', priority: 'high', content: 'Water supply has been irregular for the past week', source: 'text', status: 'pending', date: '2023-06-15' },
-    { id: 2, category: 'energy', priority: 'medium', content: 'Frequent power cuts in the evening hours', source: 'text', status: 'in-progress', date: '2023-06-16' },
-    { id: 3, category: 'water', priority: 'low', content: 'Water pressure is very low in our area', source: 'voice', status: 'resolved', date: '2023-06-10' },
+    { id: "1", category: 'water', priority: 'high', content: 'Water supply has been irregular for the past week', source: 'text', status: 'pending', date: '2023-06-15' },
+    { id: "2", category: 'energy', priority: 'medium', content: 'Frequent power cuts in the evening hours', source: 'text', status: 'in-progress', date: '2023-06-16' },
+    { id: "3", category: 'water', priority: 'low', content: 'Water pressure is very low in our area', source: 'voice', status: 'resolved', date: '2023-06-10' },
   ]);
 
+  const fetchComplaints = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.log('No active session');
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from('complaints')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('date', { ascending: false });
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        setComplaints(data);
+      }
+    } catch (error) {
+      console.error('Error fetching complaints:', error);
+      toast.error('Failed to load complaints');
+    }
+  };
+
   useEffect(() => {
-    // Redirect admins to admin dashboard
     if (!isLoading && userRole && userRole !== 'citizen') {
       navigate('/admin');
+    } else if (!isLoading && userRole === 'citizen') {
+      fetchComplaints();
     }
   }, [userRole, isLoading, navigate]);
 
@@ -59,19 +88,16 @@ const Complaints = () => {
 
   const toggleRecording = () => {
     if (isRecording) {
-      // Stop recording
       setIsRecording(false);
-      // In a real app, we would stop the actual recording here and process the audio
-      setAudioUrl('recorded-audio-url.mp3'); // This would be a real URL in production
+      setAudioUrl('recorded-audio-url.mp3');
       toast.success('Voice recording saved!');
     } else {
-      // Start recording - this would be implemented with the Web Audio API in a real app
       setIsRecording(true);
       toast.info('Recording started... Speak now');
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!category) {
@@ -111,30 +137,55 @@ const Complaints = () => {
         break;
     }
     
-    // Add new complaint to the list
-    const newComplaint = {
-      id: complaints.length + 1,
-      category,
-      priority,
-      content,
-      source,
-      status: 'pending',
-      date: new Date().toISOString().split('T')[0]
-    };
-    
-    setComplaints([newComplaint, ...complaints]);
-    
-    // Reset form
-    setComplaintText('');
-    setCategory('');
-    setPriority('');
-    setAudioUrl(null);
-    setSelectedFile(null);
-    
-    toast.success('Complaint submitted successfully!');
+    try {
+      setIsSubmitting(true);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('You must be logged in to submit a complaint');
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from('complaints')
+        .insert([
+          {
+            user_id: session.user.id,
+            category,
+            priority,
+            content,
+            source,
+            status: 'pending',
+          }
+        ])
+        .select();
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data && data.length > 0) {
+        setComplaints([data[0], ...complaints]);
+      }
+      
+      setComplaintText('');
+      setCategory('');
+      setPriority('');
+      setAudioUrl(null);
+      setSelectedFile(null);
+      
+      toast.success('Complaint submitted successfully!');
+      
+      fetchComplaints();
+    } catch (error) {
+      console.error('Error submitting complaint:', error);
+      toast.error('Failed to submit complaint');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  // Only render for citizens
   if (isLoading) {
     return (
       <MainLayout>
@@ -277,9 +328,20 @@ const Complaints = () => {
                 </form>
               </CardContent>
               <CardFooter>
-                <Button type="submit" className="w-full" onClick={handleSubmit}>
-                  <SendHorizontal className="mr-2 h-4 w-4" />
-                  Submit Complaint
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    'Submitting...'
+                  ) : (
+                    <>
+                      <SendHorizontal className="mr-2 h-4 w-4" />
+                      Submit Complaint
+                    </>
+                  )}
                 </Button>
               </CardFooter>
             </Card>
