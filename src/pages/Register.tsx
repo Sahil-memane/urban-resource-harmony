@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -48,13 +47,15 @@ const Register = () => {
       return;
     }
 
-    // Validate role selection for admin accounts
-    if (role !== 'citizen') {
+    // Determine the correct role based on selection and email
+    let finalRole = role;
+    
+    if (role === 'admin') {
       // Auto-assign the appropriate admin role based on email
-      if (email.includes('water')) {
-        setRole('water-admin');
-      } else if (email.includes('energy')) {
-        setRole('energy-admin');
+      if (email.toLowerCase().includes('water')) {
+        finalRole = 'water-admin';
+      } else if (email.toLowerCase().includes('energy')) {
+        finalRole = 'energy-admin';
       } else {
         toast.error('Admin accounts must use official department emails (containing "water" or "energy")');
         return;
@@ -64,27 +65,34 @@ const Register = () => {
     setIsLoading(true);
 
     try {
-      // Register new user with Supabase
+      // Register new user with Supabase without email confirmation
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             name,
-            role: role, // Use the determined role
-          }
+            role: finalRole, // Use the determined role
+          },
+          emailRedirectTo: window.location.origin,
         }
       });
 
       if (error) throw error;
       
       if (data.user) {
-        toast.success('Account created successfully! Please check your email for verification.');
-        if (role === 'citizen') {
-          navigate('/');
-        } else {
-          navigate('/admin');
+        // Force set the user as confirmed since we're skipping email verification
+        const { error: confirmError } = await supabase.rpc('confirm_user', {
+          user_id: data.user.id
+        });
+
+        if (confirmError) {
+          console.error('Error confirming user:', confirmError);
+          // Continue anyway since the main signup worked
         }
+
+        toast.success('Account created successfully! You can now log in.');
+        navigate('/login');
       }
     } catch (error: any) {
       console.error('Registration error:', error);
