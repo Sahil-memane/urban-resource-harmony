@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -81,13 +82,13 @@ const Register = () => {
       if (error) throw error;
       
       if (data.user) {
-        // Force set the user as confirmed since we're skipping email verification
-        const { error: confirmError } = await supabase.rpc('confirm_user', {
-          user_id: data.user.id
+        // Instead of using RPC, use direct authentication update
+        const { error: updateError } = await supabase.auth.updateUser({
+          email_confirm: true,
         });
 
-        if (confirmError) {
-          console.error('Error confirming user:', confirmError);
+        if (updateError) {
+          console.error('Error confirming user:', updateError);
           // Continue anyway since the main signup worked
         }
 
