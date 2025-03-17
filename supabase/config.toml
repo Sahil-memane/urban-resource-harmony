@@ -1,2 +1,8 @@
 
 project_id = "uirjyjwzrvqmzdflvyhw"
+
+[storage]
+backend = "file"
+
+[storage.buckets]
+default = "complaint-attachments"

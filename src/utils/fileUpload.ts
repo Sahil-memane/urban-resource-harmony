@@ -6,12 +6,17 @@ export type FileType = 'image' | 'audio';
 
 export async function uploadFile(file: File, fileType: FileType): Promise<string | null> {
   try {
-    if (!file) return null;
+    if (!file) {
+      console.error('No file provided for upload');
+      return null;
+    }
     
     // Generate a unique filename
     const fileExt = file.name.split('.').pop();
     const fileName = `${uuid()}.${fileExt}`;
     const filePath = `${fileType}/${fileName}`;
+    
+    console.log(`Uploading file to ${filePath}`);
     
     // Upload file to Supabase Storage
     const { data, error } = await supabase.storage
@@ -26,10 +31,14 @@ export async function uploadFile(file: File, fileType: FileType): Promise<string
       throw error;
     }
     
+    console.log('File uploaded successfully:', data);
+    
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
       .from('complaint-attachments')
       .getPublicUrl(filePath);
+    
+    console.log('Public URL generated:', publicUrl);
     
     return publicUrl;
   } catch (error) {

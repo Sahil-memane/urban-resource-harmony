@@ -276,18 +276,16 @@ const Complaints = () => {
           return;
         }
         
-        if (transcription) {
-          content = transcription;
-        } else {
-          content = 'Voice complaint recorded (no transcription available)';
-        }
+        // Use transcription if available, otherwise use a default message
+        content = transcription.trim() ? transcription : 'Voice complaint recorded (no transcription available)';
         break;
       case 'image':
         if (!selectedFile) {
           toast.error('Please upload an image or document');
           return;
         }
-        content = selectedFile.name;
+        // For image complaints, we'll use filename or a default message
+        content = selectedFile.name || 'Image-based complaint';
         break;
     }
     
@@ -313,32 +311,46 @@ const Complaints = () => {
         }
       }
       
-      // Handle file uploads
+      // Handle file uploads - this needs to happen before inserting into DB
       if (activeTab === 'voice' && audioBlob) {
         // Convert blob to file
         const audioFile = new File([audioBlob], 'voice-recording.wav', { type: 'audio/wav' });
         fileUrl = await uploadFile(audioFile, 'audio');
+        
+        if (!fileUrl) {
+          throw new Error('Failed to upload audio file');
+        }
       } else if (activeTab === 'image' && selectedFile) {
         fileUrl = await uploadFile(selectedFile, 'image');
+        
+        if (!fileUrl) {
+          throw new Error('Failed to upload image file');
+        }
       }
       
-      // Create the complaint
+      // Create the complaint - make sure all required fields are provided
+      const newComplaint = {
+        user_id: session.user.id,
+        category,
+        priority: determinedPriority,
+        content,
+        source,
+        status: 'pending',
+      };
+      
+      // Only add attachment_url if we have a file URL
+      if (fileUrl) {
+        newComplaint['attachment_url'] = fileUrl;
+      }
+      
+      // Insert the complaint into the database
       const { data, error } = await supabase
         .from('complaints')
-        .insert([
-          {
-            user_id: session.user.id,
-            category,
-            priority: determinedPriority,
-            content,
-            source,
-            status: 'pending',
-            ...(fileUrl && { attachment_url: fileUrl })
-          }
-        ])
+        .insert([newComplaint])
         .select();
       
       if (error) {
+        console.error('Database error:', error);
         throw error;
       }
       
@@ -356,10 +368,12 @@ const Complaints = () => {
         
         // Refresh complaints list
         fetchComplaints();
+      } else {
+        throw new Error('No data returned from database');
       }
     } catch (error) {
       console.error('Error submitting complaint:', error);
-      toast.error('Failed to submit complaint');
+      toast.error('Failed to submit complaint: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsSubmitting(false);
     }

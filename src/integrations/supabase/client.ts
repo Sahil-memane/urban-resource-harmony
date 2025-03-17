@@ -19,3 +19,31 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     },
   },
 });
+
+// Initialize storage bucket if it doesn't exist
+export const initializeStorage = async () => {
+  try {
+    // Check if bucket exists
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some(bucket => bucket.name === 'complaint-attachments');
+    
+    if (!bucketExists) {
+      // Create bucket
+      const { data, error } = await supabase.storage.createBucket('complaint-attachments', {
+        public: true,
+        fileSizeLimit: 10485760, // 10MB
+      });
+      
+      if (error) {
+        console.error('Error creating storage bucket:', error);
+      } else {
+        console.log('Storage bucket created successfully');
+      }
+    }
+  } catch (error) {
+    console.error('Failed to initialize storage:', error);
+  }
+};
+
+// Run bucket initialization
+initializeStorage();
