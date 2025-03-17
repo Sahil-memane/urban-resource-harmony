@@ -48,19 +48,13 @@ const Register = () => {
       return;
     }
 
-    // Determine the correct role based on selection and email
+    // Determine the correct role based on selection
     let finalRole = role;
     
     if (role === 'admin') {
-      // Auto-assign the appropriate admin role based on email
-      if (email.toLowerCase().includes('water')) {
-        finalRole = 'water-admin';
-      } else if (email.toLowerCase().includes('energy')) {
-        finalRole = 'energy-admin';
-      } else {
-        toast.error('Admin accounts must use official department emails (containing "water" or "energy")');
-        return;
-      }
+      // Ask user which department they belong to instead of validating email
+      const department = window.confirm('Are you from the Water Department? Click OK for Water Department, Cancel for Energy Department');
+      finalRole = department ? 'water-admin' : 'energy-admin';
     }
     
     setIsLoading(true);
@@ -199,7 +193,7 @@ const Register = () => {
               </Select>
               {role === 'admin' && (
                 <p className="text-xs text-muted-foreground">
-                  Note: Admin accounts require departmental email addresses. Water department emails must contain "water" and Energy department emails must contain "energy".
+                  Admin accounts will require department selection after form submission.
                 </p>
               )}
             </div>
