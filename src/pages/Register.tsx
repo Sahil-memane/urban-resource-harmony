@@ -82,7 +82,7 @@ const Register = () => {
       if (error) throw error;
       
       if (data.user) {
-        // Instead of using RPC, use direct authentication update
+        // Use the correct property structure for updating user metadata
         const { error: updateError } = await supabase.auth.updateUser({
           data: {
             email_confirmed: true
