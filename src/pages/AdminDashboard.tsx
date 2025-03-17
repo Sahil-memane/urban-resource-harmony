@@ -24,6 +24,7 @@ type Complaint = {
   response?: string;
   resolved_date?: string;
   resolved_by?: string;
+  attachment_url?: string;
 };
 
 const AdminDashboard = () => {
@@ -34,28 +35,42 @@ const AdminDashboard = () => {
   const [resolvedComplaints, setResolvedComplaints] = useState<Complaint[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
 
-  // Fetch complaints
+  // Fetch complaints based on admin role
   const fetchComplaints = async () => {
     if (!userRole || userRole === 'citizen') return;
 
     try {
       setIsDataLoading(true);
 
-      // Fetch pending complaints
-      const { data: pendingData, error: pendingError } = await supabase
+      let pendingQuery = supabase
         .from('complaints')
         .select('*')
         .eq('status', 'pending')
         .order('date', { ascending: false });
-
-      if (pendingError) throw pendingError;
-
-      // Fetch resolved complaints
-      const { data: resolvedData, error: resolvedError } = await supabase
+        
+      let resolvedQuery = supabase
         .from('complaints')
         .select('*')
         .eq('status', 'resolved')
         .order('resolved_date', { ascending: false });
+      
+      // Filter complaints by category based on admin role
+      if (userRole === 'water-admin') {
+        pendingQuery = pendingQuery.eq('category', 'water');
+        resolvedQuery = resolvedQuery.eq('category', 'water');
+      } else if (userRole === 'energy-admin') {
+        pendingQuery = pendingQuery.eq('category', 'energy');
+        resolvedQuery = resolvedQuery.eq('category', 'energy');
+      }
+      // Super admin can see all complaints, so no additional filtering
+
+      // Fetch pending complaints
+      const { data: pendingData, error: pendingError } = await pendingQuery;
+
+      if (pendingError) throw pendingError;
+
+      // Fetch resolved complaints
+      const { data: resolvedData, error: resolvedError } = await resolvedQuery;
 
       if (resolvedError) throw resolvedError;
 
@@ -142,6 +157,20 @@ const AdminDashboard = () => {
     );
   }
 
+  // Get department name based on role
+  const getDepartmentName = () => {
+    switch (userRole) {
+      case 'water-admin':
+        return 'Water Department';
+      case 'energy-admin':
+        return 'Energy Department';
+      case 'super-admin':
+        return 'All Departments';
+      default:
+        return 'Department';
+    }
+  };
+
   // Render only if admin
   if (userRole && userRole !== 'citizen') {
     return (
@@ -157,9 +186,7 @@ const AdminDashboard = () => {
             <div>
               <h1 className="text-3xl font-bold">Admin Dashboard</h1>
               <p className="text-muted-foreground">
-                {userRole === 'water-admin' ? 'Water Department Admin Panel' : 
-                 userRole === 'energy-admin' ? 'Energy Department Admin Panel' : 
-                 'Super Admin Panel'}
+                {getDepartmentName()} Admin Panel
               </p>
             </div>
             

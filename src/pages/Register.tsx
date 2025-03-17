@@ -8,6 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Eye, EyeOff, UserPlus } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -18,6 +25,7 @@ const Register = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [role, setRole] = useState('citizen');
   const navigate = useNavigate();
   const { userRole } = useUserRole();
 
@@ -39,6 +47,19 @@ const Register = () => {
       toast.error('Passwords do not match');
       return;
     }
+
+    // Validate role selection for admin accounts
+    if (role !== 'citizen') {
+      // Auto-assign the appropriate admin role based on email
+      if (email.includes('water')) {
+        setRole('water-admin');
+      } else if (email.includes('energy')) {
+        setRole('energy-admin');
+      } else {
+        toast.error('Admin accounts must use official department emails (containing "water" or "energy")');
+        return;
+      }
+    }
     
     setIsLoading(true);
 
@@ -50,7 +71,7 @@ const Register = () => {
         options: {
           data: {
             name,
-            role: 'citizen', // Default role for new registrations
+            role: role, // Use the determined role
           }
         }
       });
@@ -59,7 +80,11 @@ const Register = () => {
       
       if (data.user) {
         toast.success('Account created successfully! Please check your email for verification.');
-        navigate('/');
+        if (role === 'citizen') {
+          navigate('/');
+        } else {
+          navigate('/admin');
+        }
       }
     } catch (error: any) {
       console.error('Registration error:', error);
@@ -123,7 +148,7 @@ const Register = () => {
                 </span>
               </div>
             </Link>
-            <h1 className="mt-6 text-2xl font-semibold text-gray-900 dark:text-white">Create a Citizen Account</h1>
+            <h1 className="mt-6 text-2xl font-semibold text-gray-900 dark:text-white">Create an Account</h1>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
               Join JanHitConnect to access smart governance features
             </p>
@@ -143,6 +168,29 @@ const Register = () => {
                 required
                 className="w-full rounded-lg border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-janhit-500"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="role" className="text-sm font-medium">
+                Register As
+              </Label>
+              <Select
+                value={role}
+                onValueChange={setRole}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select account type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="citizen">Citizen</SelectItem>
+                  <SelectItem value="admin">Government Admin</SelectItem>
+                </SelectContent>
+              </Select>
+              {role === 'admin' && (
+                <p className="text-xs text-muted-foreground">
+                  Note: Admin accounts require departmental email addresses. Water department emails must contain "water" and Energy department emails must contain "energy".
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

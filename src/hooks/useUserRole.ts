@@ -4,11 +4,12 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
 // Define the possible user roles
-type UserRole = 'citizen' | 'water-admin' | 'energy-admin' | 'super-admin' | null;
+export type UserRole = 'citizen' | 'water-admin' | 'energy-admin' | 'super-admin' | null;
 
 export const useUserRole = () => {
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const checkUserRole = async () => {
@@ -24,8 +25,11 @@ export const useUserRole = () => {
         
         if (!session) {
           setUserRole(null);
+          setUserId(null);
           return;
         }
+
+        setUserId(session.user.id);
         
         // Get the user's profile with role information
         const { data: profile, error: profileError } = await supabase
@@ -67,6 +71,7 @@ export const useUserRole = () => {
         checkUserRole();
       } else {
         setUserRole(null);
+        setUserId(null);
         setIsLoading(false);
       }
     });
@@ -103,5 +108,5 @@ export const useUserRole = () => {
     }
   };
 
-  return { userRole, isLoading, setRole };
+  return { userRole, userId, isLoading, setRole };
 };

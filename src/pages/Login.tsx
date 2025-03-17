@@ -61,6 +61,14 @@ const Login = () => {
 
         if (profileError) throw profileError;
 
+        // Check if the user is trying to log in with the correct role type
+        const isAdmin = profile.role === 'water-admin' || profile.role === 'energy-admin' || profile.role === 'super-admin';
+        
+        if ((userType === 'citizen' && isAdmin) || (userType === 'admin' && !isAdmin)) {
+          await supabase.auth.signOut();
+          throw new Error(`This account is registered as a ${isAdmin ? 'government admin' : 'citizen'}. Please select the correct login type.`);
+        }
+
         // Handle login based on user role
         if (profile.role === 'citizen') {
           toast.success('Successfully logged in as Citizen');
@@ -160,7 +168,7 @@ const Login = () => {
               </Select>
               {userType === 'admin' && (
                 <p className="text-xs text-muted-foreground">
-                  Demo: For Water Admin use email with "water", for Energy Admin use email with "energy"
+                  Note: Only authorized government officials can access the admin dashboard.
                 </p>
               )}
             </div>
