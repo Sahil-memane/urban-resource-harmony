@@ -35,7 +35,7 @@ export const initializeStorage = async () => {
     
     if (!bucketExists) {
       console.log('Bucket complaint-attachments does not exist in the project.');
-      console.log('Please create it manually in the Supabase dashboard or through SQL.');
+      console.log('Please make sure the bucket is created in the Supabase dashboard.');
     } else {
       console.log('complaint-attachments bucket exists');
     }

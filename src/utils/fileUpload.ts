@@ -11,7 +11,7 @@ export const uploadFile = async (file: File, type: 'image' | 'audio'): Promise<s
     const fileName = `${uuidv4()}.${fileExt}`;
     const filePath = `${type}/${fileName}`;
     
-    // Upload file - we'll try to use the existing bucket if it's available
+    // Upload file to the bucket
     const { data, error } = await supabase.storage
       .from('complaint-attachments')
       .upload(filePath, file, {
