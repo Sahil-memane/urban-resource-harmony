@@ -45,14 +45,8 @@ export const initializeStorage = async () => {
       } else {
         console.log('Storage bucket created successfully');
         
-        // Set public policy on the bucket
-        const { error: policyError } = await supabase.storage.from('complaint-attachments').setPublic();
-        
-        if (policyError) {
-          console.error('Error setting public policy on bucket:', policyError);
-        } else {
-          console.log('Public policy set on complaint-attachments bucket');
-        }
+        // Update bucket policy - removed setPublic() as it doesn't exist
+        console.log('Bucket is set to public via createBucket options');
       }
     } else {
       console.log('complaint-attachments bucket already exists');
