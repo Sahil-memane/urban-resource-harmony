@@ -605,5 +605,9 @@ const Complaints = () => {
         </div>
       </motion.div>
       
-      <
+      <Chatbot />
+    </MainLayout>
+  );
+};
 
+export default Complaints;
