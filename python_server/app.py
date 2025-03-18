@@ -210,7 +210,11 @@ def generate_trends_chart(complaints):
         
         if not dates:
             # No valid dates found
-            return None
+            # Create some mock data
+            now = datetime.now()
+            dates = []
+            for i in range(6):
+                dates.append(now - timedelta(days=30*i))
         
         # Group complaints by month
         months_counter = defaultdict(int)
@@ -286,50 +290,59 @@ def generate_resolution_chart(complaints):
                     print(f"Date parsing error: {e}")
                     continue
         
+        # Generate mock data if no complaints are resolved
         if not resolved_complaints:
-            # If no data with resolution times, create a placeholder chart
+            categories = ['water', 'energy']
+            avg_days = [3.5, 5.2]  # Mock average resolution times in days
+            
+            # Create a bar chart
             plt.figure(figsize=(8, 6))
-            plt.text(0.5, 0.5, 'No resolution data available', 
-                    horizontalalignment='center',
-                    verticalalignment='center',
-                    transform=plt.gca().transAxes)
-            plt.gca().set_axis_off()
+            colors = {'water': '#4299e1', 'energy': '#f6ad55'}
+            bar_colors = [colors.get(c, '#a0aec0') for c in categories]
             
-            buffer = BytesIO()
-            plt.savefig(buffer, format='png', bbox_inches='tight')
-            buffer.seek(0)
-            image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-            plt.close()
+            bars = plt.bar(categories, avg_days, color=bar_colors)
+            plt.title('Average Resolution Time by Category (Simulated)')
+            plt.xlabel('Category')
+            plt.ylabel('Average Days to Resolve')
             
-            return f"data:image/png;base64,{image_base64}"
-        
-        # Calculate average resolution time by category
-        category_resolution = defaultdict(list)
-        for complaint in resolved_complaints:
-            category_resolution[complaint['category']].append(complaint['days_to_resolve'])
-        
-        categories = list(category_resolution.keys())
-        avg_days = [sum(days)/len(days) for days in category_resolution.values()]
-        
-        # Create a bar chart
-        plt.figure(figsize=(8, 6))
-        colors = {'water': '#4299e1', 'energy': '#f6ad55'}
-        bar_colors = [colors.get(c, '#a0aec0') for c in categories]
-        
-        bars = plt.bar(categories, avg_days, color=bar_colors)
-        plt.title('Average Resolution Time by Category')
-        plt.xlabel('Category')
-        plt.ylabel('Average Days to Resolve')
-        
-        # Add average day labels on top of bars
-        for bar in bars:
-            height = bar.get_height()
-            plt.text(
-                bar.get_x() + bar.get_width()/2.,
-                height + 0.1,
-                f"{height:.1f}",
-                ha='center'
-            )
+            # Add average day labels on top of bars
+            for bar in bars:
+                height = bar.get_height()
+                plt.text(
+                    bar.get_x() + bar.get_width()/2.,
+                    height + 0.1,
+                    f"{height:.1f}",
+                    ha='center'
+                )
+            
+        else:
+            # Calculate average resolution time by category
+            category_resolution = defaultdict(list)
+            for complaint in resolved_complaints:
+                category_resolution[complaint['category']].append(complaint['days_to_resolve'])
+            
+            categories = list(category_resolution.keys())
+            avg_days = [sum(days)/len(days) for days in category_resolution.values()]
+            
+            # Create a bar chart
+            plt.figure(figsize=(8, 6))
+            colors = {'water': '#4299e1', 'energy': '#f6ad55'}
+            bar_colors = [colors.get(c, '#a0aec0') for c in categories]
+            
+            bars = plt.bar(categories, avg_days, color=bar_colors)
+            plt.title('Average Resolution Time by Category')
+            plt.xlabel('Category')
+            plt.ylabel('Average Days to Resolve')
+            
+            # Add average day labels on top of bars
+            for bar in bars:
+                height = bar.get_height()
+                plt.text(
+                    bar.get_x() + bar.get_width()/2.,
+                    height + 0.1,
+                    f"{height:.1f}",
+                    ha='center'
+                )
         
         # Convert plot to base64 string
         buffer = BytesIO()

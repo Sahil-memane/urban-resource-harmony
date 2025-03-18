@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -111,7 +112,7 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ complaints }) => {
     if (!complaint.attachment_url) return null;
     
     const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(complaint.attachment_url);
-    const isAudio = /\.(mp3|wav|ogg)$/i.test(complaint.attachment_url);
+    const isAudio = /\.(mp3|wav|ogg|mpeg)$/i.test(complaint.attachment_url);
     const isPdf = /\.pdf$/i.test(complaint.attachment_url);
     
     if (isImage) {
@@ -128,7 +129,9 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ complaints }) => {
       return (
         <div className="mt-4">
           <audio controls className="w-full">
-            <source src={complaint.attachment_url} type="audio/wav" />
+            <source src={complaint.attachment_url} type={isAudio && /\.mp3$/i.test(complaint.attachment_url) ? 'audio/mp3' : 
+                                                   isAudio && /\.wav$/i.test(complaint.attachment_url) ? 'audio/wav' : 
+                                                   isAudio && /\.ogg$/i.test(complaint.attachment_url) ? 'audio/ogg' : 'audio/mpeg'} />
             Your browser does not support audio playback.
           </audio>
         </div>
