@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -27,7 +26,6 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ complaints }) => {
   const [selectedComplaint, setSelectedComplaint] = React.useState<Complaint | null>(null);
   const [dialogOpen, setDialogOpen] = React.useState(false);
 
-  // Function to render the category icon
   const renderCategoryIcon = (category: string) => {
     switch (category) {
       case 'water':
@@ -39,7 +37,6 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ complaints }) => {
     }
   };
 
-  // Function to render the source icon
   const renderSourceIcon = (source: string) => {
     switch (source) {
       case 'text':
@@ -53,7 +50,6 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ complaints }) => {
     }
   };
 
-  // Function to render priority badge
   const renderPriorityBadge = (priority: string) => {
     let variant: "default" | "secondary" | "destructive" | "outline" = "outline";
     
@@ -76,7 +72,6 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ complaints }) => {
     );
   };
 
-  // Function to render status badge
   const renderStatusBadge = (status: string) => {
     let className = "capitalize ";
     
@@ -99,7 +94,6 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ complaints }) => {
     );
   };
 
-  // Function to format dates
   const formatDate = (dateString: string) => {
     try {
       return format(parseISO(dateString), 'MMM dd, yyyy');
@@ -108,13 +102,11 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ complaints }) => {
     }
   };
 
-  // Function to open complaint details dialog
   const openComplaintDetails = (complaint: Complaint) => {
     setSelectedComplaint(complaint);
     setDialogOpen(true);
   };
 
-  // Function to render attachment based on source type
   const renderAttachment = (complaint: Complaint) => {
     if (!complaint.attachment_url) return null;
     
@@ -136,7 +128,7 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ complaints }) => {
       return (
         <div className="mt-4">
           <audio controls className="w-full">
-            <source src={complaint.attachment_url} />
+            <source src={complaint.attachment_url} type="audio/wav" />
             Your browser does not support audio playback.
           </audio>
         </div>
@@ -226,7 +218,6 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ complaints }) => {
         </Table>
       )}
 
-      {/* Complaint Details Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>

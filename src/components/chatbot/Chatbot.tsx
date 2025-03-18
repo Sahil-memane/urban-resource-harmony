@@ -68,7 +68,7 @@ const Chatbot: React.FC = () => {
       console.log('Sending message to chatbot:', userMessage.content);
       console.log('With chat history:', chatHistory);
       
-      // Call the edge function directly
+      // Call the edge function
       const { data, error } = await supabase.functions.invoke('chatbot', {
         body: { message: userMessage.content, chatHistory }
       });

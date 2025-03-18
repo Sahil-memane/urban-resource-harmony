@@ -56,11 +56,9 @@ const Complaints = () => {
   const [isLoadingComplaints, setIsLoadingComplaints] = useState(true);
   const [predictionLoading, setPredictionLoading] = useState(false);
   
-  // Media recording state
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   
-  // Speech recognition
   const recognitionRef = useRef<any>(null);
   const [transcription, setTranscription] = useState('');
   
@@ -116,13 +114,11 @@ const Complaints = () => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       
-      // Validate file size
       if (file.size > MAX_FILE_SIZE) {
         toast.error(`File is too large. Maximum size is ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
         return;
       }
       
-      // Validate file type
       if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
         toast.error('File type not allowed. Please upload a valid image or PDF.');
         return;
@@ -156,7 +152,6 @@ const Complaints = () => {
         const audioUrl = URL.createObjectURL(audioBlob);
         setAudioUrl(audioUrl);
         
-        // Clean up the media stream
         stream.getTracks().forEach(track => track.stop());
       };
       
@@ -164,9 +159,7 @@ const Complaints = () => {
       setIsRecording(true);
       toast.info('Recording started... Speak now');
       
-      // Start speech recognition if available
       try {
-        // @ts-ignore - Speech recognition API not in TypeScript defs
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
           recognitionRef.current = new SpeechRecognition();
@@ -206,7 +199,6 @@ const Complaints = () => {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       
-      // Stop speech recognition if active
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
@@ -259,7 +251,7 @@ const Complaints = () => {
     
     let content = '';
     let source = activeTab;
-    let fileUrl = null;
+    let attachment_url = null;
     
     try {
       setIsSubmitting(true);
@@ -272,7 +264,6 @@ const Complaints = () => {
         return;
       }
       
-      // Determine content based on the active tab
       switch (activeTab) {
         case 'text':
           if (!complaintText.trim()) {
@@ -287,7 +278,6 @@ const Complaints = () => {
             return;
           }
           
-          // Use transcription if available, otherwise use a default message
           content = transcription.trim() ? transcription : 'Voice complaint recorded (no transcription available)';
           break;
         case 'image':
@@ -295,54 +285,49 @@ const Complaints = () => {
             toast.error('Please upload an image or document');
             return;
           }
-          // For image complaints, we'll use filename or a default message
           content = `Image complaint: ${selectedFile.name || 'Image-based complaint'}`;
           break;
       }
       
-      // Determine priority using AI if not manually set
       let determinedPriority = priority;
       if (!determinedPriority) {
         const aiPriority = await getPriorityFromAI(content);
         if (aiPriority) {
           determinedPriority = aiPriority;
         } else {
-          determinedPriority = 'medium'; // Default fallback
+          determinedPriority = 'medium';
         }
       }
       
-      // Handle file uploads if needed
       if (activeTab === 'voice' && audioBlob) {
-        // Convert blob to file
         const audioFile = new File([audioBlob], 'voice-recording.wav', { type: 'audio/wav' });
-        fileUrl = await uploadFile(audioFile, 'audio');
+        attachment_url = await uploadFile(audioFile, 'audio');
         
-        if (!fileUrl) {
+        if (!attachment_url) {
           throw new Error('Failed to upload audio file');
         }
-        console.log('Uploaded audio file:', fileUrl);
+        console.log('Uploaded audio file:', attachment_url);
       } else if (activeTab === 'image' && selectedFile) {
-        fileUrl = await uploadFile(selectedFile, 'image');
+        attachment_url = await uploadFile(selectedFile, 'image');
         
-        if (!fileUrl) {
+        if (!attachment_url) {
           throw new Error('Failed to upload image file');
         }
-        console.log('Uploaded image file:', fileUrl);
+        console.log('Uploaded image file:', attachment_url);
       }
       
-      // Create the complaint - remove the attachment_url field since it doesn't exist in the database
       const newComplaint = {
         user_id: session.user.id,
         category,
         priority: determinedPriority,
         content,
         source,
-        status: 'pending'
+        status: 'pending',
+        attachment_url
       };
       
       console.log('Submitting complaint:', newComplaint);
       
-      // Insert the complaint into the database
       const { data, error } = await supabase
         .from('complaints')
         .insert([newComplaint])
@@ -356,7 +341,6 @@ const Complaints = () => {
       if (data && data.length > 0) {
         toast.success('Complaint submitted successfully!');
         
-        // Reset form
         setComplaintText('');
         setCategory('');
         setPriority('');
@@ -365,7 +349,6 @@ const Complaints = () => {
         setSelectedFile(null);
         setTranscription('');
         
-        // Refresh complaints list
         fetchComplaints();
       } else {
         throw new Error('No data returned from database');
@@ -622,10 +605,5 @@ const Complaints = () => {
         </div>
       </motion.div>
       
-      {/* Chatbot */}
-      <Chatbot />
-    </MainLayout>
-  );
-};
+      <
 
-export default Complaints;

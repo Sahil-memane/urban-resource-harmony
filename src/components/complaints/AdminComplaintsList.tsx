@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,7 +34,6 @@ const AdminComplaintsList: React.FC<AdminComplaintsListProps> = ({ complaints, o
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewDetailsOpen, setViewDetailsOpen] = useState(false);
 
-  // Function to render the category icon
   const renderCategoryIcon = (category: string) => {
     switch (category) {
       case 'water':
@@ -47,7 +45,6 @@ const AdminComplaintsList: React.FC<AdminComplaintsListProps> = ({ complaints, o
     }
   };
 
-  // Function to render the source icon
   const renderSourceIcon = (source: string) => {
     switch (source) {
       case 'text':
@@ -61,7 +58,6 @@ const AdminComplaintsList: React.FC<AdminComplaintsListProps> = ({ complaints, o
     }
   };
 
-  // Function to render priority badge
   const renderPriorityBadge = (priority: string) => {
     let variant: "default" | "secondary" | "destructive" | "outline" = "outline";
     
@@ -84,7 +80,6 @@ const AdminComplaintsList: React.FC<AdminComplaintsListProps> = ({ complaints, o
     );
   };
 
-  // Function to render status badge
   const renderStatusBadge = (status: string) => {
     let className = "capitalize ";
     
@@ -107,7 +102,6 @@ const AdminComplaintsList: React.FC<AdminComplaintsListProps> = ({ complaints, o
     );
   };
 
-  // Function to format dates
   const formatDate = (dateString: string) => {
     try {
       return format(parseISO(dateString), 'MMM dd, yyyy');
@@ -134,7 +128,6 @@ const AdminComplaintsList: React.FC<AdminComplaintsListProps> = ({ complaints, o
     }
   };
 
-  // Function to render attachment
   const renderAttachment = (complaint: Complaint) => {
     if (!complaint.attachment_url) return null;
     
@@ -156,7 +149,7 @@ const AdminComplaintsList: React.FC<AdminComplaintsListProps> = ({ complaints, o
       return (
         <div className="mt-4">
           <audio controls className="w-full">
-            <source src={complaint.attachment_url} />
+            <source src={complaint.attachment_url} type="audio/wav" />
             Your browser does not support audio playback.
           </audio>
         </div>
@@ -260,7 +253,6 @@ const AdminComplaintsList: React.FC<AdminComplaintsListProps> = ({ complaints, o
         </TableBody>
       </Table>
 
-      {/* Resolve Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -329,7 +321,6 @@ const AdminComplaintsList: React.FC<AdminComplaintsListProps> = ({ complaints, o
         </DialogContent>
       </Dialog>
 
-      {/* View Details Dialog */}
       <Dialog open={viewDetailsOpen} onOpenChange={setViewDetailsOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
