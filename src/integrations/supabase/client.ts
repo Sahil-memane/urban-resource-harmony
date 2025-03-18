@@ -24,7 +24,13 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 export const initializeStorage = async () => {
   try {
     // Check if bucket exists
-    const { data: buckets } = await supabase.storage.listBuckets();
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    
+    if (listError) {
+      console.error('Error listing buckets:', listError);
+      return;
+    }
+    
     const bucketExists = buckets?.some(bucket => bucket.name === 'complaint-attachments');
     
     if (!bucketExists) {
@@ -38,7 +44,18 @@ export const initializeStorage = async () => {
         console.error('Error creating storage bucket:', error);
       } else {
         console.log('Storage bucket created successfully');
+        
+        // Set public policy on the bucket
+        const { error: policyError } = await supabase.storage.from('complaint-attachments').setPublic();
+        
+        if (policyError) {
+          console.error('Error setting public policy on bucket:', policyError);
+        } else {
+          console.log('Public policy set on complaint-attachments bucket');
+        }
       }
+    } else {
+      console.log('complaint-attachments bucket already exists');
     }
   } catch (error) {
     console.error('Failed to initialize storage:', error);

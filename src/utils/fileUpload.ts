@@ -16,7 +16,7 @@ export async function uploadFile(file: File, fileType: FileType): Promise<string
     const fileName = `${uuid()}.${fileExt}`;
     const filePath = `${fileType}/${fileName}`;
     
-    console.log(`Uploading file to ${filePath}`);
+    console.log(`Uploading file to ${filePath}`, { fileType, fileSize: file.size, fileName: file.name });
     
     // Upload file to Supabase Storage
     const { data, error } = await supabase.storage
@@ -31,7 +31,7 @@ export async function uploadFile(file: File, fileType: FileType): Promise<string
       throw error;
     }
     
-    console.log('File uploaded successfully:', data);
+    console.log('File uploaded successfully:', data?.path);
     
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
@@ -53,4 +53,41 @@ export async function getFileUrl(path: string): Promise<string> {
     .getPublicUrl(path);
   
   return publicUrl;
+}
+
+// Add a function to check if the bucket exists and create it if necessary
+export async function ensureStorageBucketExists(): Promise<boolean> {
+  try {
+    // Check if bucket exists
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    
+    if (listError) {
+      console.error('Error listing buckets:', listError);
+      return false;
+    }
+    
+    const bucketExists = buckets?.some(bucket => bucket.name === 'complaint-attachments');
+    
+    if (!bucketExists) {
+      console.log('Creating complaint-attachments bucket...');
+      const { data, error } = await supabase.storage.createBucket('complaint-attachments', {
+        public: true,
+        fileSizeLimit: 10485760, // 10MB
+      });
+      
+      if (error) {
+        console.error('Error creating storage bucket:', error);
+        return false;
+      }
+      
+      console.log('Storage bucket created successfully');
+    } else {
+      console.log('complaint-attachments bucket already exists');
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to ensure storage bucket exists:', error);
+    return false;
+  }
 }

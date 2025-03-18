@@ -65,7 +65,36 @@ const Chatbot: React.FC = () => {
         content: msg.content
       }));
       
-      // Send to the chatbot endpoint
+      // First try the Python backend
+      try {
+        const { data: pythonData, error: pythonError } = await supabase.functions.invoke('python-bridge', {
+          body: { 
+            endpoint: 'chatbot',
+            data: { message: userMessage.content, chatHistory }
+          }
+        });
+        
+        if (pythonError) throw pythonError;
+        
+        if (pythonData && pythonData.response) {
+          // Add assistant response from Python backend
+          const assistantMessage: Message = {
+            id: Date.now().toString(),
+            role: 'assistant',
+            content: pythonData.response,
+            timestamp: new Date()
+          };
+          
+          setMessages(prev => [...prev, assistantMessage]);
+          setIsLoading(false);
+          return;
+        }
+      } catch (pythonError) {
+        console.warn('Python backend not available, falling back to Gemini Edge function:', pythonError);
+        // Fall back to Gemini edge function if Python backend is not available
+      }
+      
+      // Fall back to direct Gemini integration
       const { data, error } = await supabase.functions.invoke('chatbot', {
         body: { message: userMessage.content, chatHistory }
       });
