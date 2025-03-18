@@ -45,7 +45,7 @@ export const initializeStorage = async () => {
       } else {
         console.log('Storage bucket created successfully');
         
-        // Update bucket policy - removed setPublic() as it doesn't exist
+        // Note: setPublic() is not needed as we've set public: true in createBucket options
         console.log('Bucket is set to public via createBucket options');
       }
     } else {
