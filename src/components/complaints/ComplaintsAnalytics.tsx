@@ -22,21 +22,30 @@ const ComplaintsAnalytics: React.FC = () => {
   useEffect(() => {
     if (complaints.length > 0) {
       generateAnalytics();
+    } else {
+      setIsLoading(false);
     }
   }, [complaints]);
 
   const fetchComplaints = async () => {
     try {
       setIsLoading(true);
+      console.log("Fetching complaints for analytics...");
       const { data, error } = await supabase
         .from('complaints')
         .select('*');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching complaints:', error);
+        throw error;
+      }
       
       if (data) {
         console.log("Fetched complaints for analytics:", data.length);
         setComplaints(data);
+      } else {
+        console.log("No complaints data returned");
+        setComplaints([]);
       }
     } catch (error) {
       console.error('Error fetching complaints for analytics:', error);
@@ -46,10 +55,17 @@ const ComplaintsAnalytics: React.FC = () => {
 
   const generateAnalytics = async () => {
     try {
-      setIsLoading(true);
+      if (complaints.length === 0) {
+        console.log("No complaints to generate analytics from");
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log("Generating analytics from", complaints.length, "complaints");
       
       // First try the Python backend
       try {
+        console.log("Attempting to generate analytics using Python backend...");
         const { data, error } = await supabase.functions.invoke('python-bridge', {
           body: { 
             endpoint: 'generate_analytics',
@@ -57,10 +73,13 @@ const ComplaintsAnalytics: React.FC = () => {
           }
         });
         
-        if (error) throw error;
+        if (error) {
+          console.error("Python bridge error:", error);
+          throw error;
+        }
         
         if (data) {
-          console.log("Analytics generated successfully from Python backend");
+          console.log("Analytics generated successfully from Python backend:", data);
           setCharts(data);
           setIsLoading(false);
           return;
@@ -71,6 +90,7 @@ const ComplaintsAnalytics: React.FC = () => {
       }
       
       // Fallback to default charts
+      console.log("Using fallback charts");
       setCharts({
         categoryChart: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGV4dCB4PSIyNTAiIHk9IjE1MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSIyMCI+UmVhbC1kYXRhIGNoYXJ0cyB3aWxsIGFwcGVhciBoZXJlPC90ZXh0Pjwvc3ZnPg==",
         priorityChart: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGV4dCB4PSIyNTAiIHk9IjE1MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSIyMCI+UmVhbC1kYXRhIGNoYXJ0cyB3aWxsIGFwcGVhciBoZXJlPC90ZXh0Pjwvc3ZnPg==",
@@ -90,6 +110,21 @@ const ComplaintsAnalytics: React.FC = () => {
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
         <p>Loading analytics...</p>
+      </div>
+    );
+  }
+
+  if (complaints.length === 0) {
+    return (
+      <div className="space-y-6">
+        <Card className="p-6">
+          <div className="text-center">
+            <h3 className="text-lg font-medium mb-2">No complaints data available</h3>
+            <p className="text-muted-foreground">
+              Submit some complaints to see analytics here.
+            </p>
+          </div>
+        </Card>
       </div>
     );
   }

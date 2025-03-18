@@ -1,73 +1,72 @@
 
 from flask import Flask, request, jsonify
-import google.generativeai as genai
-import os
-import json
 from flask_cors import CORS
+import os
+import google.generativeai as genai
 import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
-import io
 import base64
+from io import BytesIO
 from datetime import datetime, timedelta
+from collections import Counter, defaultdict
+import json
+
+# Configure matplotlib to use Agg backend (non-interactive, good for web servers)
+matplotlib.use('Agg')
 
 app = Flask(__name__)
-CORS(app)
+CORS(app)  # Enable CORS for all routes
 
-# Configure Google Generative AI with your API key
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+# Configure Gemini API with key from environment
+api_key = os.environ.get("GEMINI_API_KEY")
+if api_key:
+    genai.configure(api_key=api_key)
 else:
-    print("WARNING: GEMINI_API_KEY environment variable not set")
-
-# System prompt for the chatbot
-SYSTEM_PROMPT = """
-You are a helpful assistant for a citizen services portal focusing on water and energy services.
-Your name is CityAssist and you help users navigate the portal and submit complaints.
-
-You can help users with:
-- Understanding how to submit complaints about water or energy services
-- Explaining the complaint tracking system
-- Navigating to different parts of the portal
-- Explaining priority levels for complaints
-
-Be concise, friendly, and helpful. If you don't know something, say so.
-"""
+    print("WARNING: GEMINI_API_KEY not set in environment variables")
 
 @app.route('/chatbot', methods=['POST'])
 def chatbot():
     try:
         data = request.json
-        if not data or 'message' not in data:
-            return jsonify({"error": "Missing message"}), 400
         
-        message = data.get('message')
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        
+        message = data.get('message', '')
         chat_history = data.get('chatHistory', [])
         
-        print(f"Received chatbot request: {message}")
+        # Check if API key is available
+        if not api_key:
+            return jsonify({"error": "GEMINI_API_KEY not set"}), 500
         
-        # Configure the model
+        # Create a prompt with context about the city services
+        system_prompt = """
+        You are CityAssist, a helpful assistant for a citizen services portal focusing on water and energy services.
+        You help users navigate the portal and submit complaints about water and energy services.
+        
+        Some facts about the system:
+        - Users can submit complaints through text, voice recording, or image upload
+        - Complaints can be categorized as water or energy related
+        - Complaints are assigned a priority (low, medium, high)
+        - Users can track the status of their complaints
+        
+        Be concise, friendly, and helpful. If you don't know something, say so.
+        """
+        
+        # Format the chat history for Gemini
+        messages = [{"role": "system", "parts": [system_prompt]}]
+        
+        for msg in chat_history:
+            role = "user" if msg.get("role") == "user" else "model"
+            messages.append({"role": role, "parts": [msg.get("content", "")]})
+        
+        # Add the current message
+        messages.append({"role": "user", "parts": [message]})
+        
+        # Generate a response using Gemini
         model = genai.GenerativeModel('gemini-pro')
-        
-        # Prepare the chat
-        chat = model.start_chat(history=[])
-        
-        # Add system prompt as the first message
-        chat.send_message(SYSTEM_PROMPT)
-        
-        # Add chat history if available
-        for entry in chat_history:
-            if entry.get('role') and entry.get('content'):
-                role = entry.get('role')
-                content = entry.get('content')
-                if role == 'user':
-                    chat.send_message(content)
-                # For assistant messages, we don't add them as they're already part of the chat context
-        
-        # Send the user's message and get the response
-        response = chat.send_message(message)
-        
-        print(f"Generated response: {response.text}")
+        response = model.generate_content(messages)
         
         return jsonify({"response": response.text})
     
@@ -79,159 +78,271 @@ def chatbot():
 def generate_analytics():
     try:
         data = request.json
+        
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        
         complaints = data.get('complaints', [])
         
         if not complaints:
             return jsonify({"error": "No complaints data provided"}), 400
         
-        # Generate analytics using matplotlib
-        analytics_data = {}
+        print(f"Generating analytics for {len(complaints)} complaints")
         
-        # 1. Complaints by Category
-        categories = {}
-        for complaint in complaints:
-            category = complaint.get('category')
-            if category:
-                categories[category] = categories.get(category, 0) + 1
+        # Generate charts
+        category_chart = generate_category_chart(complaints)
+        priority_chart = generate_priority_chart(complaints)
+        trends_chart = generate_trends_chart(complaints)
+        resolution_chart = generate_resolution_chart(complaints)
         
-        # Create pie chart for categories
-        plt.figure(figsize=(10, 6))
-        labels = list(categories.keys())
-        sizes = list(categories.values())
-        colors = ['#3b82f6', '#eab308']
-        plt.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
-        plt.axis('equal')
+        return jsonify({
+            "categoryChart": category_chart,
+            "priorityChart": priority_chart,
+            "trendsChart": trends_chart,
+            "resolutionChart": resolution_chart
+        })
+    
+    except Exception as e:
+        print(f"Error in generate_analytics endpoint: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+def generate_category_chart(complaints):
+    """Generate a pie chart showing complaints by category"""
+    try:
+        categories = [complaint.get('category', 'unknown') for complaint in complaints]
+        category_counts = Counter(categories)
+        
+        # Create a pie chart
+        plt.figure(figsize=(8, 6))
+        plt.pie(
+            category_counts.values(), 
+            labels=category_counts.keys(),
+            autopct='%1.1f%%',
+            startangle=90,
+            colors=['#4299e1', '#f6ad55']
+        )
         plt.title('Complaints by Category')
+        plt.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle
         
-        # Save to bytes
-        category_img = io.BytesIO()
-        plt.savefig(category_img, format='png')
-        category_img.seek(0)
-        category_chart = base64.b64encode(category_img.getvalue()).decode('utf-8')
+        # Convert plot to base64 string
+        buffer = BytesIO()
+        plt.savefig(buffer, format='png', bbox_inches='tight')
+        buffer.seek(0)
+        image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
         plt.close()
         
-        # 2. Complaints by Priority
-        priorities = {}
-        for complaint in complaints:
-            priority = complaint.get('priority')
-            if priority:
-                priorities[priority] = priorities.get(priority, 0) + 1
+        return f"data:image/png;base64,{image_base64}"
+    except Exception as e:
+        print(f"Error generating category chart: {e}")
+        return None
+
+def generate_priority_chart(complaints):
+    """Generate a bar chart showing complaints by priority"""
+    try:
+        priorities = [complaint.get('priority', 'unknown') for complaint in complaints]
+        priority_counts = Counter(priorities)
         
-        # Create pie chart for priorities
-        plt.figure(figsize=(10, 6))
-        labels = list(priorities.keys())
-        sizes = list(priorities.values())
-        colors = ['#ef4444', '#3b82f6', '#22c55e']
-        plt.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
-        plt.axis('equal')
+        # Sort priorities in a meaningful order
+        sorted_priorities = []
+        sorted_counts = []
+        for priority in ['high', 'medium', 'low']:
+            if priority in priority_counts:
+                sorted_priorities.append(priority)
+                sorted_counts.append(priority_counts[priority])
+        
+        # Add any other priorities not in the expected list
+        for priority, count in priority_counts.items():
+            if priority not in ['high', 'medium', 'low']:
+                sorted_priorities.append(priority)
+                sorted_counts.append(count)
+        
+        # Create a bar chart
+        plt.figure(figsize=(8, 6))
+        colors = {'high': '#f56565', 'medium': '#ed8936', 'low': '#48bb78'}
+        bar_colors = [colors.get(p, '#a0aec0') for p in sorted_priorities]
+        
+        bars = plt.bar(sorted_priorities, sorted_counts, color=bar_colors)
         plt.title('Complaints by Priority')
+        plt.xlabel('Priority')
+        plt.ylabel('Number of Complaints')
         
-        # Save to bytes
-        priority_img = io.BytesIO()
-        plt.savefig(priority_img, format='png')
-        priority_img.seek(0)
-        priority_chart = base64.b64encode(priority_img.getvalue()).decode('utf-8')
+        # Add count labels on top of bars
+        for bar in bars:
+            height = bar.get_height()
+            plt.text(
+                bar.get_x() + bar.get_width()/2.,
+                height + 0.1,
+                str(int(height)),
+                ha='center'
+            )
+        
+        # Convert plot to base64 string
+        buffer = BytesIO()
+        plt.savefig(buffer, format='png', bbox_inches='tight')
+        buffer.seek(0)
+        image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
         plt.close()
         
-        # 3. Monthly Complaint Trends
-        monthly_data = {}
+        return f"data:image/png;base64,{image_base64}"
+    except Exception as e:
+        print(f"Error generating priority chart: {e}")
+        return None
+
+def generate_trends_chart(complaints):
+    """Generate a line chart showing complaint trends over time"""
+    try:
+        # Extract dates and convert to datetime objects
+        dates = []
         for complaint in complaints:
             date_str = complaint.get('date')
             if date_str:
                 try:
-                    date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-                    month = date.strftime('%b')
-                    category = complaint.get('category')
-                    if month not in monthly_data:
-                        monthly_data[month] = {'water': 0, 'energy': 0}
-                    if category == 'water':
-                        monthly_data[month]['water'] += 1
-                    elif category == 'energy':
-                        monthly_data[month]['energy'] += 1
-                except Exception as e:
-                    print(f"Error parsing date: {e}")
+                    # Try to parse the date - format may vary
+                    if 'T' in date_str:
+                        # ISO format
+                        date = datetime.fromisoformat(date_str.split('T')[0])
+                    else:
+                        # Try other formats
+                        date = datetime.strptime(date_str.split(' ')[0], '%Y-%m-%d')
+                    dates.append(date)
+                except (ValueError, TypeError):
+                    continue
         
-        # Create line chart for monthly trends
-        months = list(monthly_data.keys())
-        water_counts = [monthly_data[m]['water'] for m in months]
-        energy_counts = [monthly_data[m]['energy'] for m in months]
+        if not dates:
+            # No valid dates found
+            return None
         
-        plt.figure(figsize=(12, 6))
-        plt.plot(months, water_counts, marker='o', linewidth=2, label='Water')
-        plt.plot(months, energy_counts, marker='s', linewidth=2, label='Energy')
+        # Group complaints by month
+        months_counter = defaultdict(int)
+        for date in dates:
+            month_key = date.strftime('%Y-%m')
+            months_counter[month_key] += 1
+        
+        # Sort months chronologically
+        sorted_months = sorted(months_counter.keys())
+        counts = [months_counter[month] for month in sorted_months]
+        
+        # Format month labels to be more readable
+        display_labels = [datetime.strptime(m, '%Y-%m').strftime('%b %Y') for m in sorted_months]
+        
+        # Create a line chart
+        plt.figure(figsize=(10, 6))
+        plt.plot(display_labels, counts, marker='o', linestyle='-', color='#4299e1', linewidth=2)
+        plt.title('Monthly Complaint Trends')
         plt.xlabel('Month')
         plt.ylabel('Number of Complaints')
-        plt.title('Monthly Complaint Trends')
         plt.grid(True, linestyle='--', alpha=0.7)
-        plt.legend()
         
-        # Save to bytes
-        trends_img = io.BytesIO()
-        plt.savefig(trends_img, format='png')
-        trends_img.seek(0)
-        trends_chart = base64.b64encode(trends_img.getvalue()).decode('utf-8')
+        # Rotate x-axis labels for better readability
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        
+        # Add values above points
+        for i, count in enumerate(counts):
+            plt.text(i, count + 0.3, str(count), ha='center')
+        
+        # Convert plot to base64 string
+        buffer = BytesIO()
+        plt.savefig(buffer, format='png', bbox_inches='tight')
+        buffer.seek(0)
+        image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
         plt.close()
         
-        # 4. Resolution Time Analysis
-        resolution_data = {'water': {'high': 0, 'medium': 0, 'low': 0}, 
-                           'energy': {'high': 0, 'medium': 0, 'low': 0}}
-        
+        return f"data:image/png;base64,{image_base64}"
+    except Exception as e:
+        print(f"Error generating trends chart: {e}")
+        return None
+
+def generate_resolution_chart(complaints):
+    """Generate a bar chart showing average resolution time by category"""
+    try:
+        # Filter complaints with both date and resolved_date
+        resolved_complaints = []
         for complaint in complaints:
-            category = complaint.get('category')
-            priority = complaint.get('priority')
             date_str = complaint.get('date')
             resolved_date_str = complaint.get('resolved_date')
+            category = complaint.get('category')
             
-            if category and priority and date_str and resolved_date_str:
+            if date_str and resolved_date_str and category:
                 try:
-                    date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-                    resolved_date = datetime.fromisoformat(resolved_date_str.replace('Z', '+00:00'))
-                    days = (resolved_date - date).days
+                    # Parse dates
+                    if 'T' in date_str:
+                        date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                    else:
+                        date = datetime.strptime(date_str, '%Y-%m-%d')
+                        
+                    if 'T' in resolved_date_str:
+                        resolved_date = datetime.fromisoformat(resolved_date_str.replace('Z', '+00:00'))
+                    else:
+                        resolved_date = datetime.strptime(resolved_date_str, '%Y-%m-%d')
                     
-                    if category in resolution_data and priority in resolution_data[category]:
-                        # Add to count and total days
-                        resolution_data[category][priority] += days
-                except Exception as e:
-                    print(f"Error calculating resolution time: {e}")
+                    days_to_resolve = (resolved_date - date).days
+                    if days_to_resolve >= 0:  # Ensure valid duration
+                        resolved_complaints.append({
+                            'category': category,
+                            'days_to_resolve': days_to_resolve
+                        })
+                except (ValueError, TypeError) as e:
+                    print(f"Date parsing error: {e}")
+                    continue
         
-        # Create bar chart for resolution time
-        categories = list(resolution_data.keys())
-        high_times = [resolution_data[c]['high'] for c in categories]
-        medium_times = [resolution_data[c]['medium'] for c in categories]
-        low_times = [resolution_data[c]['low'] for c in categories]
+        if not resolved_complaints:
+            # If no data with resolution times, create a placeholder chart
+            plt.figure(figsize=(8, 6))
+            plt.text(0.5, 0.5, 'No resolution data available', 
+                    horizontalalignment='center',
+                    verticalalignment='center',
+                    transform=plt.gca().transAxes)
+            plt.gca().set_axis_off()
+            
+            buffer = BytesIO()
+            plt.savefig(buffer, format='png', bbox_inches='tight')
+            buffer.seek(0)
+            image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+            plt.close()
+            
+            return f"data:image/png;base64,{image_base64}"
         
-        x = np.arange(len(categories))
-        width = 0.25
+        # Calculate average resolution time by category
+        category_resolution = defaultdict(list)
+        for complaint in resolved_complaints:
+            category_resolution[complaint['category']].append(complaint['days_to_resolve'])
         
-        plt.figure(figsize=(12, 6))
-        plt.bar(x - width, high_times, width, label='High Priority', color='#ef4444')
-        plt.bar(x, medium_times, width, label='Medium Priority', color='#3b82f6')
-        plt.bar(x + width, low_times, width, label='Low Priority', color='#22c55e')
+        categories = list(category_resolution.keys())
+        avg_days = [sum(days)/len(days) for days in category_resolution.values()]
         
+        # Create a bar chart
+        plt.figure(figsize=(8, 6))
+        colors = {'water': '#4299e1', 'energy': '#f6ad55'}
+        bar_colors = [colors.get(c, '#a0aec0') for c in categories]
+        
+        bars = plt.bar(categories, avg_days, color=bar_colors)
+        plt.title('Average Resolution Time by Category')
         plt.xlabel('Category')
-        plt.ylabel('Days to Resolution')
-        plt.title('Average Resolution Time by Category and Priority')
-        plt.xticks(x, categories)
-        plt.legend()
-        plt.grid(True, linestyle='--', alpha=0.7, axis='y')
+        plt.ylabel('Average Days to Resolve')
         
-        # Save to bytes
-        resolution_img = io.BytesIO()
-        plt.savefig(resolution_img, format='png')
-        resolution_img.seek(0)
-        resolution_chart = base64.b64encode(resolution_img.getvalue()).decode('utf-8')
+        # Add average day labels on top of bars
+        for bar in bars:
+            height = bar.get_height()
+            plt.text(
+                bar.get_x() + bar.get_width()/2.,
+                height + 0.1,
+                f"{height:.1f}",
+                ha='center'
+            )
+        
+        # Convert plot to base64 string
+        buffer = BytesIO()
+        plt.savefig(buffer, format='png', bbox_inches='tight')
+        buffer.seek(0)
+        image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
         plt.close()
         
-        return jsonify({
-            "categoryChart": f"data:image/png;base64,{category_chart}",
-            "priorityChart": f"data:image/png;base64,{priority_chart}",
-            "trendsChart": f"data:image/png;base64,{trends_chart}",
-            "resolutionChart": f"data:image/png;base64,{resolution_chart}"
-        })
-    
+        return f"data:image/png;base64,{image_base64}"
     except Exception as e:
-        print(f"Error generating analytics: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        print(f"Error generating resolution chart: {e}")
+        return None
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)

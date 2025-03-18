@@ -262,33 +262,6 @@ const Complaints = () => {
     let source = activeTab;
     let fileUrl = null;
     
-    switch (activeTab) {
-      case 'text':
-        if (!complaintText.trim()) {
-          toast.error('Please enter your complaint');
-          return;
-        }
-        content = complaintText;
-        break;
-      case 'voice':
-        if (!audioBlob) {
-          toast.error('Please record your voice first');
-          return;
-        }
-        
-        // Use transcription if available, otherwise use a default message
-        content = transcription.trim() ? transcription : 'Voice complaint recorded (no transcription available)';
-        break;
-      case 'image':
-        if (!selectedFile) {
-          toast.error('Please upload an image or document');
-          return;
-        }
-        // For image complaints, we'll use filename or a default message
-        content = selectedFile.name || 'Image-based complaint';
-        break;
-    }
-    
     try {
       setIsSubmitting(true);
       
@@ -298,6 +271,34 @@ const Complaints = () => {
         toast.error('You must be logged in to submit a complaint');
         navigate('/login');
         return;
+      }
+      
+      // Determine content based on the active tab
+      switch (activeTab) {
+        case 'text':
+          if (!complaintText.trim()) {
+            toast.error('Please enter your complaint');
+            return;
+          }
+          content = complaintText;
+          break;
+        case 'voice':
+          if (!audioBlob) {
+            toast.error('Please record your voice first');
+            return;
+          }
+          
+          // Use transcription if available, otherwise use a default message
+          content = transcription.trim() ? transcription : 'Voice complaint recorded (no transcription available)';
+          break;
+        case 'image':
+          if (!selectedFile) {
+            toast.error('Please upload an image or document');
+            return;
+          }
+          // For image complaints, we'll use filename or a default message
+          content = `Image complaint: ${selectedFile.name || 'Image-based complaint'}`;
+          break;
       }
       
       // Determine priority using AI if not manually set
@@ -320,15 +321,17 @@ const Complaints = () => {
         if (!fileUrl) {
           throw new Error('Failed to upload audio file');
         }
+        console.log('Uploaded audio file:', fileUrl);
       } else if (activeTab === 'image' && selectedFile) {
         fileUrl = await uploadFile(selectedFile, 'image');
         
         if (!fileUrl) {
           throw new Error('Failed to upload image file');
         }
+        console.log('Uploaded image file:', fileUrl);
       }
       
-      // Create the complaint - make sure all required fields are provided
+      // Create the complaint
       const newComplaint = {
         user_id: session.user.id,
         category,
@@ -336,12 +339,10 @@ const Complaints = () => {
         content,
         source,
         status: 'pending',
+        attachment_url: fileUrl,  // This can be null if no file was uploaded
       };
       
-      // Only add attachment_url if we have a file URL
-      if (fileUrl) {
-        newComplaint['attachment_url'] = fileUrl;
-      }
+      console.log('Submitting complaint:', newComplaint);
       
       // Insert the complaint into the database
       const { data, error } = await supabase

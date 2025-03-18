@@ -1,24 +1,34 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import { v4 as uuid } from 'uuid';
+import { supabase } from '@/integrations/supabase/client';
+import { v4 as uuidv4 } from 'uuid';
 
-export type FileType = 'image' | 'audio';
-
-export async function uploadFile(file: File, fileType: FileType): Promise<string | null> {
+export const uploadFile = async (file: File, type: 'image' | 'audio'): Promise<string | null> => {
   try {
-    if (!file) {
-      console.error('No file provided for upload');
-      return null;
+    console.log(`Uploading ${type} file: ${file.name}`);
+    
+    // Create a unique file name
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${uuidv4()}.${fileExt}`;
+    const filePath = `${type}/${fileName}`;
+    
+    // Check if bucket exists and create it if it doesn't
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some(bucket => bucket.name === 'complaint-attachments');
+    
+    if (!bucketExists) {
+      console.log('Bucket does not exist, creating it');
+      const { error } = await supabase.storage.createBucket('complaint-attachments', {
+        public: true,
+        fileSizeLimit: 10485760, // 10MB
+      });
+      
+      if (error) {
+        console.error('Error creating bucket:', error);
+        throw error;
+      }
     }
     
-    // Generate a unique filename
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${uuid()}.${fileExt}`;
-    const filePath = `${fileType}/${fileName}`;
-    
-    console.log(`Uploading file to ${filePath}`, { fileType, fileSize: file.size, fileName: file.name });
-    
-    // Upload file to Supabase Storage
+    // Upload file
     const { data, error } = await supabase.storage
       .from('complaint-attachments')
       .upload(filePath, file, {
@@ -31,63 +41,15 @@ export async function uploadFile(file: File, fileType: FileType): Promise<string
       throw error;
     }
     
-    console.log('File uploaded successfully:', data?.path);
-    
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
       .from('complaint-attachments')
       .getPublicUrl(filePath);
     
-    console.log('Public URL generated:', publicUrl);
-    
+    console.log('File uploaded successfully. Public URL:', publicUrl);
     return publicUrl;
   } catch (error) {
-    console.error('File upload error:', error);
+    console.error('File upload failed:', error);
     return null;
   }
-}
-
-export async function getFileUrl(path: string): Promise<string> {
-  const { data: { publicUrl } } = supabase.storage
-    .from('complaint-attachments')
-    .getPublicUrl(path);
-  
-  return publicUrl;
-}
-
-// Add a function to check if the bucket exists and create it if necessary
-export async function ensureStorageBucketExists(): Promise<boolean> {
-  try {
-    // Check if bucket exists
-    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-    
-    if (listError) {
-      console.error('Error listing buckets:', listError);
-      return false;
-    }
-    
-    const bucketExists = buckets?.some(bucket => bucket.name === 'complaint-attachments');
-    
-    if (!bucketExists) {
-      console.log('Creating complaint-attachments bucket...');
-      const { data, error } = await supabase.storage.createBucket('complaint-attachments', {
-        public: true,
-        fileSizeLimit: 10485760, // 10MB
-      });
-      
-      if (error) {
-        console.error('Error creating storage bucket:', error);
-        return false;
-      }
-      
-      console.log('Storage bucket created successfully');
-    } else {
-      console.log('complaint-attachments bucket already exists');
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Failed to ensure storage bucket exists:', error);
-    return false;
-  }
-}
+};

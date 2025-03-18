@@ -67,6 +67,7 @@ const Chatbot: React.FC = () => {
       
       // First try the Python backend
       try {
+        console.log('Attempting to use Python backend for chatbot...');
         const { data: pythonData, error: pythonError } = await supabase.functions.invoke('python-bridge', {
           body: { 
             endpoint: 'chatbot',
@@ -74,9 +75,13 @@ const Chatbot: React.FC = () => {
           }
         });
         
-        if (pythonError) throw pythonError;
+        if (pythonError) {
+          console.warn('Python backend error:', pythonError);
+          throw pythonError;
+        }
         
         if (pythonData && pythonData.response) {
+          console.log('Received response from Python backend:', pythonData);
           // Add assistant response from Python backend
           const assistantMessage: Message = {
             id: Date.now().toString(),
@@ -95,17 +100,23 @@ const Chatbot: React.FC = () => {
       }
       
       // Fall back to direct Gemini integration
+      console.log('Falling back to direct Gemini integration...');
       const { data, error } = await supabase.functions.invoke('chatbot', {
         body: { message: userMessage.content, chatHistory }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Gemini edge function error:', error);
+        throw error;
+      }
+      
+      console.log('Received response from Gemini edge function:', data);
       
       // Add assistant response
       const assistantMessage: Message = {
         id: Date.now().toString(),
         role: 'assistant',
-        content: data.response,
+        content: data.response || 'I apologize, but I couldn\'t generate a proper response.',
         timestamp: new Date()
       };
       
