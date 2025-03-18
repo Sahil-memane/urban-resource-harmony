@@ -11,24 +11,7 @@ export const uploadFile = async (file: File, type: 'image' | 'audio'): Promise<s
     const fileName = `${uuidv4()}.${fileExt}`;
     const filePath = `${type}/${fileName}`;
     
-    // Check if bucket exists and create it if it doesn't
-    const { data: buckets } = await supabase.storage.listBuckets();
-    const bucketExists = buckets?.some(bucket => bucket.name === 'complaint-attachments');
-    
-    if (!bucketExists) {
-      console.log('Bucket does not exist, creating it');
-      const { error } = await supabase.storage.createBucket('complaint-attachments', {
-        public: true,
-        fileSizeLimit: 10485760, // 10MB
-      });
-      
-      if (error) {
-        console.error('Error creating bucket:', error);
-        throw error;
-      }
-    }
-    
-    // Upload file
+    // Upload file - we'll try to use the existing bucket if it's available
     const { data, error } = await supabase.storage
       .from('complaint-attachments')
       .upload(filePath, file, {

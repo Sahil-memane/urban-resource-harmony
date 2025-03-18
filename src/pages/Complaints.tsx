@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
@@ -312,7 +311,7 @@ const Complaints = () => {
         }
       }
       
-      // Handle file uploads - this needs to happen before inserting into DB
+      // Handle file uploads if needed
       if (activeTab === 'voice' && audioBlob) {
         // Convert blob to file
         const audioFile = new File([audioBlob], 'voice-recording.wav', { type: 'audio/wav' });
@@ -331,15 +330,14 @@ const Complaints = () => {
         console.log('Uploaded image file:', fileUrl);
       }
       
-      // Create the complaint
+      // Create the complaint - remove the attachment_url field since it doesn't exist in the database
       const newComplaint = {
         user_id: session.user.id,
         category,
         priority: determinedPriority,
         content,
         source,
-        status: 'pending',
-        attachment_url: fileUrl,  // This can be null if no file was uploaded
+        status: 'pending'
       };
       
       console.log('Submitting complaint:', newComplaint);

@@ -65,58 +65,30 @@ const Chatbot: React.FC = () => {
         content: msg.content
       }));
       
-      // First try the Python backend
-      try {
-        console.log('Attempting to use Python backend for chatbot...');
-        const { data: pythonData, error: pythonError } = await supabase.functions.invoke('python-bridge', {
-          body: { 
-            endpoint: 'chatbot',
-            data: { message: userMessage.content, chatHistory }
-          }
-        });
-        
-        if (pythonError) {
-          console.warn('Python backend error:', pythonError);
-          throw pythonError;
-        }
-        
-        if (pythonData && pythonData.response) {
-          console.log('Received response from Python backend:', pythonData);
-          // Add assistant response from Python backend
-          const assistantMessage: Message = {
-            id: Date.now().toString(),
-            role: 'assistant',
-            content: pythonData.response,
-            timestamp: new Date()
-          };
-          
-          setMessages(prev => [...prev, assistantMessage]);
-          setIsLoading(false);
-          return;
-        }
-      } catch (pythonError) {
-        console.warn('Python backend not available, falling back to Gemini Edge function:', pythonError);
-        // Fall back to Gemini edge function if Python backend is not available
-      }
+      console.log('Sending message to chatbot:', userMessage.content);
+      console.log('With chat history:', chatHistory);
       
-      // Fall back to direct Gemini integration
-      console.log('Falling back to direct Gemini integration...');
+      // Call the edge function directly
       const { data, error } = await supabase.functions.invoke('chatbot', {
         body: { message: userMessage.content, chatHistory }
       });
       
       if (error) {
-        console.error('Gemini edge function error:', error);
+        console.error('Chatbot function error:', error);
         throw error;
       }
       
-      console.log('Received response from Gemini edge function:', data);
+      console.log('Received response from chatbot function:', data);
+      
+      if (!data || !data.response) {
+        throw new Error('No response received from chatbot');
+      }
       
       // Add assistant response
       const assistantMessage: Message = {
         id: Date.now().toString(),
         role: 'assistant',
-        content: data.response || 'I apologize, but I couldn\'t generate a proper response.',
+        content: data.response,
         timestamp: new Date()
       };
       

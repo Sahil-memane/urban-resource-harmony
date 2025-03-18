@@ -44,6 +44,8 @@ serve(async (req) => {
     - Explaining priority levels for complaints
     
     Be concise, friendly, and helpful. If you don't know something, say so.
+    
+    Always respond in a helpful and informative way, never respond with "I'm sorry, I couldn't generate a response at the moment."
     `;
 
     // Prepare messages including history
@@ -72,6 +74,9 @@ serve(async (req) => {
       parts: [{ text: message }]
     });
 
+    // Log the entire conversation for debugging
+    console.log("Full conversation context:", JSON.stringify(messages, null, 2));
+
     const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent", {
       method: "POST",
       headers: {
@@ -87,15 +92,22 @@ serve(async (req) => {
       })
     });
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Gemini API error:", errorText);
+      throw new Error(`Gemini API error: ${response.status} ${errorText}`);
+    }
+
     const data = await response.json();
+    console.log("Gemini API response:", JSON.stringify(data, null, 2));
     
-    let botResponse = "I'm sorry, I couldn't generate a response at the moment.";
+    let botResponse = "I'm here to help with water and energy services. Could you please try asking your question again?";
     
     if (data.candidates && data.candidates[0] && data.candidates[0].content) {
       botResponse = data.candidates[0].content.parts[0].text;
     }
 
-    console.log("Bot response generated");
+    console.log("Bot response generated:", botResponse);
     return new Response(
       JSON.stringify({ response: botResponse }),
       {
@@ -106,7 +118,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error in chatbot function:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message, response: "I'm having trouble connecting right now. Please try again later." }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,

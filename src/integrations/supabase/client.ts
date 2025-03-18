@@ -34,22 +34,10 @@ export const initializeStorage = async () => {
     const bucketExists = buckets?.some(bucket => bucket.name === 'complaint-attachments');
     
     if (!bucketExists) {
-      // Create bucket
-      const { data, error } = await supabase.storage.createBucket('complaint-attachments', {
-        public: true,
-        fileSizeLimit: 10485760, // 10MB
-      });
-      
-      if (error) {
-        console.error('Error creating storage bucket:', error);
-      } else {
-        console.log('Storage bucket created successfully');
-        
-        // Note: setPublic() is not needed as we've set public: true in createBucket options
-        console.log('Bucket is set to public via createBucket options');
-      }
+      console.log('Bucket complaint-attachments does not exist in the project.');
+      console.log('Please create it manually in the Supabase dashboard or through SQL.');
     } else {
-      console.log('complaint-attachments bucket already exists');
+      console.log('complaint-attachments bucket exists');
     }
   } catch (error) {
     console.error('Failed to initialize storage:', error);
