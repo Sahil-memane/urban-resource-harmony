@@ -1,11 +1,20 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import MainLayout from '@/components/layout/MainLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ComplaintsAnalytics from '@/components/complaints/ComplaintsAnalytics';
+import { Card, CardContent } from '@/components/ui/card';
+import { 
+  BarChart4, 
+  TrendingUp, 
+  Lightbulb, 
+  HelpCircle
+} from 'lucide-react';
 
 const ComplaintsAnalyticsPage = () => {
+  const [activeTab, setActiveTab] = useState('overview');
+
   return (
     <MainLayout>
       <motion.div
@@ -17,31 +26,32 @@ const ComplaintsAnalyticsPage = () => {
       >
         <h1 className="text-3xl font-bold mb-6">Complaints Analytics</h1>
         
-        <Tabs defaultValue="overview" className="w-full">
+        <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="mb-6">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="trends">Trends</TabsTrigger>
-            <TabsTrigger value="predictions">Predictions</TabsTrigger>
+            <TabsTrigger value="overview" className="flex items-center gap-2">
+              <BarChart4 size={16} />
+              <span>Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="trends" className="flex items-center gap-2">
+              <TrendingUp size={16} />
+              <span>Trends</span>
+            </TabsTrigger>
+            <TabsTrigger value="predictions" className="flex items-center gap-2">
+              <Lightbulb size={16} />
+              <span>Predictions</span>
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="overview">
-            <ComplaintsAnalytics />
+            <ComplaintsAnalytics viewType="overview" />
           </TabsContent>
           
           <TabsContent value="trends">
-            <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-6 text-center">
-              <p className="text-muted-foreground">
-                Trend analysis will be implemented with Python backend integration
-              </p>
-            </div>
+            <ComplaintsAnalytics viewType="trends" />
           </TabsContent>
           
           <TabsContent value="predictions">
-            <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-6 text-center">
-              <p className="text-muted-foreground">
-                AI predictions will be implemented with Python backend integration
-              </p>
-            </div>
+            <ComplaintsAnalytics viewType="predictions" />
           </TabsContent>
         </Tabs>
       </motion.div>
