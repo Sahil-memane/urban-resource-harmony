@@ -1,7 +1,6 @@
-
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Loader2, AlertTriangle, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -24,6 +23,12 @@ import {
   ScatterChart,
   Scatter,
   ZAxis,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  ComposedChart,
 } from 'recharts';
 
 const COLORS = {
@@ -35,6 +40,13 @@ const COLORS = {
   success: '#10B981', // Green
   warning: '#FBBF24', // Yellow
   danger: '#DC2626',  // Red
+  residential: '#8884d8', // Purple
+  industrial: '#82ca9d', // Green
+  commercial: '#ffc658', // Yellow
+  domestic: '#8dd1e1', // Light blue
+  others: '#a4de6c', // Light green
+  primary: '#6366f1', // Primary app color
+  secondary: '#ec4899', // Secondary app color
 };
 
 type AnalyticsProps = {
@@ -549,7 +561,7 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
                       outerRadius={80}
                       label
                     >
-                      {analyticsData?.categoryData.map((entry: any, index: number) => (
+                      {analyticsData?.categoryData?.map((entry: any, index: number) => (
                         <Cell key={`cell-${index}`} fill={COLORS[entry.name] || '#000000'} />
                       ))}
                     </Pie>
@@ -574,7 +586,7 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
                     <YAxis />
                     <Tooltip />
                     <Bar dataKey="value">
-                      {analyticsData?.priorityData.map((entry: any, index: number) => (
+                      {analyticsData?.priorityData?.map((entry: any, index: number) => (
                         <Cell key={`cell-${index}`} fill={COLORS[entry.name] || '#000000'} />
                       ))}
                     </Bar>
@@ -630,17 +642,17 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
                   <YAxis />
                   <Tooltip />
                   <Bar dataKey="value">
-                    {analyticsData?.resolutionData.map((entry: any, index: number) => (
+                    {analyticsData?.resolutionData?.map((entry: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={COLORS[entry.name] || '#000000'} />
                     ))}
                   </Bar>
                 </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
+              </div>
+            </CardContent>
+          </Card>
         </Card>
 
-        {userRole === 'water-admin' || userRole === 'energy-admin' || userRole === 'super-admin' ? (
+        {userRole !== 'citizen' && (
           <Card>
             <CardHeader>
               <CardTitle>Complaints by Time of Day</CardTitle>
@@ -659,7 +671,97 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
               </div>
             </CardContent>
           </Card>
-        ) : null}
+        )}
+        
+        {/* PCMC specific resource allocation data */}
+        {userRole !== 'citizen' && analyticsData?.resourceAllocation && (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {userRole === 'water-admin' 
+                  ? 'Water Resource Allocation (%)' 
+                  : userRole === 'energy-admin' 
+                  ? 'Energy Resource Allocation (%)' 
+                  : 'Resource Allocation (%)'}
+              </CardTitle>
+              <CardDescription>
+                Based on PCMC data
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={analyticsData?.resourceAllocation}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label={({ value }) => `${value}%`}
+                      labelLine={true}
+                    >
+                      {analyticsData?.resourceAllocation?.map((entry: any, index: number) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={COLORS[entry.name.toLowerCase()] || `hsl(${index * 45}, 70%, 60%)`} 
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => `${value}%`} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
+        {userRole === 'citizen' && analyticsData?.citizenRecommendations && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Seasonal Water & Energy Alerts</CardTitle>
+              <CardDescription>
+                Based on PCMC historical patterns
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-auto max-h-[400px]">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-muted">
+                      <th className="p-2 text-left">Month</th>
+                      <th className="p-2 text-left">Alert</th>
+                      <th className="p-2 text-left">Recommendation</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analyticsData?.citizenRecommendations?.map((item: any, index: number) => (
+                      <tr key={index} className={index % 2 === 0 ? 'bg-muted/50' : ''}>
+                        <td className="p-2">{item.month}</td>
+                        <td className="p-2">
+                          <span 
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              item.level === 'high' 
+                                ? 'bg-red-100 text-red-800' 
+                                : item.level === 'medium' 
+                                ? 'bg-yellow-100 text-yellow-800' 
+                                : 'bg-green-100 text-green-800'
+                            }`}
+                          >
+                            {item.alert}
+                          </span>
+                        </td>
+                        <td className="p-2">{item.conservation}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }
@@ -697,92 +799,120 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
                     name="Energy"
                   />
                 </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {userRole === 'water-admin' 
-                ? 'Water Issues by Area' 
-                : userRole === 'energy-admin' 
-                ? 'Energy Issues by Area' 
-                : 'Complaints by Area'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={analyticsData?.areaComparison}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  {userRole === 'water-admin' ? (
-                    <>
-                      <Bar dataKey="leakage" fill="#4299E1" name="Leakage" />
-                      <Bar dataKey="shortage" fill="#9F7AEA" name="Shortage" />
-                      <Bar dataKey="quality" fill="#38B2AC" name="Quality" />
-                    </>
-                  ) : userRole === 'energy-admin' ? (
-                    <>
-                      <Bar dataKey="outages" fill="#F6AD55" name="Outages" />
-                      <Bar dataKey="voltage" fill="#E53E3E" name="Voltage" />
-                      <Bar dataKey="billing" fill="#805AD5" name="Billing" />
-                    </>
+        {/* PCMC Consumption Trends */}
+        {analyticsData?.consumptionTrends && (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {userRole === 'water-admin' 
+                  ? 'PCMC Water Consumption Trends' 
+                  : userRole === 'energy-admin' 
+                  ? 'PCMC Energy Consumption Trends' 
+                  : 'PCMC Resource Consumption Trends'}
+              </CardTitle>
+              <CardDescription>
+                Historical consumption patterns in Pimpri Chinchwad
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={analyticsData?.consumptionTrends}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="year" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    {userRole === 'water-admin' && (
+                      <>
+                        <Line type="monotone" dataKey="domestic" stroke="#8884d8" name="Domestic (MLD)" />
+                        <Line type="monotone" dataKey="industrial" stroke="#82ca9d" name="Industrial (MLD)" />
+                        <Line type="monotone" dataKey="total" stroke="#ff7300" name="Total (MLD)" strokeWidth={2} />
+                      </>
+                    )}
+                    {userRole === 'energy-admin' && (
+                      <>
+                        <Line type="monotone" dataKey="residential" stroke="#8884d8" name="Residential (MWh)" />
+                        <Line type="monotone" dataKey="industrial" stroke="#82ca9d" name="Industrial (MWh)" />
+                        <Line type="monotone" dataKey="commercial" stroke="#ffc658" name="Commercial (MWh)" />
+                        <Line type="monotone" dataKey="total" stroke="#ff7300" name="Total (MWh)" strokeWidth={2} />
+                      </>
+                    )}
+                    {userRole === 'super-admin' && (
+                      <>
+                        <Line type="monotone" dataKey="water" stroke={COLORS.water} name="Water Demand (MLD)" />
+                        <Line type="monotone" dataKey="energy" stroke={COLORS.energy} name="Energy Demand (MW)" />
+                      </>
+                    )}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Seasonal Demand Patterns */}
+        {analyticsData?.seasonalDemand && (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {userRole === 'water-admin' 
+                  ? 'Seasonal Water Demand Patterns' 
+                  : userRole === 'energy-admin' 
+                  ? 'Seasonal Energy Demand Patterns' 
+                  : 'Seasonal Resource Demand'}
+              </CardTitle>
+              <CardDescription>
+                Seasonal variations in resource demand based on PCMC data
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  {userRole === 'water-admin' || userRole === 'energy-admin' ? (
+                    <ComposedChart data={analyticsData?.seasonalDemand}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      {userRole === 'water-admin' && (
+                        <>
+                          <Bar dataKey="demand" fill="#8884d8" name="Water Demand (MLD)" />
+                          <Line type="monotone" dataKey="supply" stroke="#82ca9d" name="Supply Capacity (MLD)" />
+                          <Line type="monotone" dataKey="critical" stroke="#ff7300" name="Critical Level (MLD)" strokeDasharray="5 5" />
+                        </>
+                      )}
+                      {userRole === 'energy-admin' && (
+                        <>
+                          <Bar dataKey="demand" fill="#8884d8" name="Energy Demand (MW)" />
+                          <Line type="monotone" dataKey="capacity" stroke="#82ca9d" name="Capacity (MW)" />
+                          <Line type="monotone" dataKey="peak" stroke="#ff7300" name="Peak Capacity (MW)" strokeDasharray="5 5" />
+                        </>
+                      )}
+                    </ComposedChart>
                   ) : (
-                    <>
-                      <Bar dataKey="water" fill="#4299E1" name="Water" />
-                      <Bar dataKey="energy" fill="#F6AD55" name="Energy" />
-                    </>
+                    <RadarChart data={analyticsData?.seasonalDemand}>
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="name" />
+                      <PolarRadiusAxis angle={90} domain={[0, 150]} />
+                      <Radar name="Water (% of average)" dataKey="water" stroke={COLORS.water} fill={COLORS.water} fillOpacity={0.6} />
+                      <Radar name="Energy (% of average)" dataKey="energy" stroke={COLORS.energy} fill={COLORS.energy} fillOpacity={0.6} />
+                      <Legend />
+                      <Tooltip />
+                    </RadarChart>
                   )}
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Seasonal Impact Analysis</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={analyticsData?.seasonalTrends}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  {userRole === 'water-admin' ? (
-                    <>
-                      <Line type="monotone" dataKey="leakage" stroke="#4299E1" name="Leakage" />
-                      <Line type="monotone" dataKey="flooding" stroke="#38B2AC" name="Flooding" />
-                      <Line type="monotone" dataKey="quality" stroke="#9F7AEA" name="Quality" />
-                    </>
-                  ) : userRole === 'energy-admin' ? (
-                    <>
-                      <Line type="monotone" dataKey="outages" stroke="#F6AD55" name="Outages" />
-                      <Line type="monotone" dataKey="demand" stroke="#E53E3E" name="Demand" />
-                      <Line type="monotone" dataKey="efficiency" stroke="#48BB78" name="Efficiency %" />
-                    </>
-                  ) : (
-                    <>
-                      <Line type="monotone" dataKey="water" stroke="#4299E1" name="Water" />
-                      <Line type="monotone" dataKey="energy" stroke="#F6AD55" name="Energy" />
-                      <Line type="monotone" dataKey="resolved" stroke="#48BB78" name="Resolved %" />
-                    </>
-                  )}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
+        {/* Recurring Issues Analysis */}
         <Card>
           <CardHeader>
             <CardTitle>Recurring Issues Analysis</CardTitle>
@@ -800,10 +930,58 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
                   <Bar yAxisId="left" dataKey="count" fill="#8884d8" name="Total Complaints" />
                   <Bar yAxisId="right" dataKey="recurringRate" fill="#82ca9d" name="Recurring Rate %" />
                 </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
+
+        {/* Efficiency Metrics */}
+        {analyticsData?.efficiencyMetrics && (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {userRole === 'water-admin' 
+                  ? 'Water System Efficiency Metrics' 
+                  : userRole === 'energy-admin' 
+                  ? 'Energy System Efficiency Metrics' 
+                  : 'Resource System Efficiency'}
+              </CardTitle>
+              <CardDescription>
+                Analyzing improvement in system efficiency over time
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={analyticsData?.efficiencyMetrics}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="year" />
+                    <YAxis domain={[0, 100]} />
+                    <Tooltip formatter={(value) => `${value}%`} />
+                    <Legend />
+                    {userRole === 'water-admin' && (
+                      <>
+                        <Line type="monotone" dataKey="leakage" stroke="#ff7300" name="Distribution Losses (%)" />
+                        <Line type="monotone" dataKey="treatment" stroke="#82ca9d" name="Treatment Efficiency (%)" />
+                      </>
+                    )}
+                    {userRole === 'energy-admin' && (
+                      <>
+                        <Line type="monotone" dataKey="losses" stroke="#ff7300" name="T&D Losses (%)" />
+                        <Line type="monotone" dataKey="renewable" stroke="#82ca9d" name="Renewable Mix (%)" />
+                      </>
+                    )}
+                    {userRole === 'super-admin' && (
+                      <>
+                        <Line type="monotone" dataKey="water" stroke={COLORS.water} name="Water System Efficiency (%)" />
+                        <Line type="monotone" dataKey="energy" stroke={COLORS.energy} name="Energy System Efficiency (%)" />
+                      </>
+                    )}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }
@@ -811,6 +989,176 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
   function renderPredictionsAnalytics() {
     return (
       <div className="space-y-6">
+        {/* Future Resource Demand */}
+        {analyticsData?.futureDemand && (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {userRole === 'water-admin' 
+                  ? 'Projected Water Demand' 
+                  : userRole === 'energy-admin' 
+                  ? 'Projected Energy Demand' 
+                  : 'Projected Resource Demand'}
+              </CardTitle>
+              <CardDescription>
+                5-year projection based on PCMC growth patterns
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  {userRole === 'water-admin' || userRole === 'energy-admin' ? (
+                    <ComposedChart data={analyticsData?.futureDemand}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="year" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="projected" fill="#8884d8" name="Projected Demand" />
+                      <Line type="monotone" dataKey="sustainable" stroke="#82ca9d" name="Sustainable Supply" />
+                      <Area dataKey="gap" fill="#ff7300" stroke="#ff7300" name="Supply Gap" />
+                    </ComposedChart>
+                  ) : (
+                    <LineChart data={analyticsData?.futureDemand}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="year" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="water" stroke={COLORS.water} name="Water Demand (MLD)" />
+                      <Line type="monotone" dataKey="energy" stroke={COLORS.energy} name="Energy Demand (MW)" />
+                    </LineChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Resource Risk Assessment */}
+        {analyticsData?.resourceRisks && (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {userRole === 'water-admin' 
+                  ? 'Water Supply Risk Assessment' 
+                  : userRole === 'energy-admin' 
+                  ? 'Energy Supply Risk Assessment' 
+                  : 'Resource Risk Assessment'}
+              </CardTitle>
+              <CardDescription>
+                Area-wise risk factors based on infrastructure and demand
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  {userRole === 'water-admin' ? (
+                    <RadarChart data={analyticsData?.resourceRisks}>
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="area" />
+                      <PolarRadiusAxis angle={90} domain={[0, 100]} />
+                      <Radar name="Shortage Risk" dataKey="shortageRisk" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+                      <Radar name="Infrastructure Risk" dataKey="infrastructureRisk" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.6} />
+                      <Radar name="Quality Risk" dataKey="qualityRisk" stroke="#ffc658" fill="#ffc658" fillOpacity={0.6} />
+                      <Legend />
+                      <Tooltip />
+                    </RadarChart>
+                  ) : userRole === 'energy-admin' ? (
+                    <RadarChart data={analyticsData?.resourceRisks}>
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="area" />
+                      <PolarRadiusAxis angle={90} domain={[0, 100]} />
+                      <Radar name="Outage Risk" dataKey="outageRisk" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+                      <Radar name="Capacity Risk" dataKey="capacityRisk" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.6} />
+                      <Radar name="Infrastructure Risk" dataKey="infrastructureRisk" stroke="#ffc658" fill="#ffc658" fillOpacity={0.6} />
+                      <Legend />
+                      <Tooltip />
+                    </RadarChart>
+                  ) : (
+                    <BarChart data={analyticsData?.resourceRisks} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" domain={[0, 100]} />
+                      <YAxis type="category" dataKey="area" width={100} />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="waterRisk" name="Water Risk" fill={COLORS.water} />
+                      <Bar dataKey="energyRisk" name="Energy Risk" fill={COLORS.energy} />
+                    </BarChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Citizen Recommendations */}
+        {analyticsData?.citizenRecommendations && (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {userRole === 'water-admin' 
+                  ? 'Water Conservation Alerts Calendar' 
+                  : userRole === 'energy-admin' 
+                  ? 'Energy Conservation Alerts Calendar' 
+                  : 'Resource Conservation Alerts'}
+              </CardTitle>
+              <CardDescription>
+                Seasonal conservation recommendations for citizens
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-auto max-h-[400px]">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-muted">
+                      <th className="p-2 text-left">Month</th>
+                      <th className="p-2 text-left">Alert Status</th>
+                      <th className="p-2 text-left">Conservation Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analyticsData?.citizenRecommendations?.map((item: any, index: number) => (
+                      <tr key={index} className={index % 2 === 0 ? 'bg-muted/50' : ''}>
+                        <td className="p-2">{item.month}</td>
+                        <td className="p-2">
+                          <span 
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              item.level === 'high' 
+                                ? 'bg-red-100 text-red-800' 
+                                : item.level === 'medium' 
+                                ? 'bg-yellow-100 text-yellow-800' 
+                                : 'bg-green-100 text-green-800'
+                            }`}
+                          >
+                            {item.alert}
+                          </span>
+                        </td>
+                        <td className="p-2">{item.conservation}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {userRole !== 'citizen' && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium mb-2">Citizen notification template:</h4>
+                  <div className="p-3 border rounded bg-muted/30">
+                    <p className="text-sm">
+                      <span className="font-semibold">PCMC {userRole === 'water-admin' ? 'Water' : 'Energy'} Alert:</span> 
+                      {userRole === 'water-admin'
+                        ? " Based on current reservoir levels and summer demand projections, we advise residents to prepare for possible water supply timing changes. Please store adequate water and report leakages promptly."
+                        : " Due to anticipated high summer demand, occasional load management may be necessary during peak hours (6-10 PM). Please minimize heavy appliance usage during these hours."}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Expected Complaint Volume */}
         <Card>
           <CardHeader>
             <CardTitle>Expected Complaint Volume</CardTitle>
@@ -828,11 +1176,12 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
                   <Bar yAxisId="left" dataKey="expected" fill="#8884d8" name="Expected Complaints" />
                   <Line yAxisId="right" type="monotone" dataKey="confidence" stroke="#82ca9d" name="Confidence %" />
                 </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
+              </div>
+            </CardContent>
+          </Card>
         </Card>
 
+        {/* Resolution Time Predictions */}
         <Card>
           <CardHeader>
             <CardTitle>Resolution Time Predictions</CardTitle>
@@ -849,11 +1198,12 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
                   <Bar dataKey="current" fill="#8884d8" name="Current (days)" />
                   <Bar dataKey="predicted" fill="#82ca9d" name="Predicted (days)" />
                 </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
+              </div>
+            </CardContent>
+          </Card>
         </Card>
 
+        {/* Resource Allocation Recommendations */}
         <Card>
           <CardHeader>
             <CardTitle>Recommended Resource Allocation</CardTitle>
@@ -873,9 +1223,9 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
                   <Bar dataKey="current" fill="#8884d8" name="Current %" />
                   <Bar dataKey="recommended" fill="#82ca9d" name="Recommended %" />
                 </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
+              </div>
+            </CardContent>
+          </Card>
         </Card>
       </div>
     );
