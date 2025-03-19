@@ -8,9 +8,9 @@ enabled = true
 enabled = true
 
 [[storage.buckets]]
+id = "complaint-attachments"
 name = "complaint-attachments"
 public = true
-file_size_limit = "10MB"
 
 [storage.buckets.allowed_mime_types]
 "image/jpeg" = true
@@ -22,3 +22,6 @@ file_size_limit = "10MB"
 "audio/wav" = true
 "audio/ogg" = true
 "audio/mpeg" = true
+
+[storage.buckets.file_size_limit]
+"10MB" = true
