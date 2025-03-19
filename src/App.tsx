@@ -17,6 +17,8 @@ import NotFound from "./pages/NotFound";
 import Complaints from "./pages/Complaints";
 import ComplaintsAnalytics from "./pages/ComplaintsAnalytics";
 import AdminDashboard from "./pages/AdminDashboard";
+import Water from "./pages/Water";
+import Energy from "./pages/Energy";
 
 // Components
 import Chatbot from "./components/chatbot/Chatbot";
@@ -44,6 +46,8 @@ const App = () => {
               <Route path="/complaints" element={<Complaints />} />
               <Route path="/complaints/analytics" element={<ComplaintsAnalytics />} />
               <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/water" element={<Water />} />
+              <Route path="/energy" element={<Energy />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

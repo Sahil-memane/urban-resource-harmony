@@ -72,12 +72,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <NavLink to="/complaints" icon={<MessageSquare size={16} />} active={location.pathname.includes('/complaints')}>
                 Complaints
               </NavLink>
-              {(userRole === 'water-admin' || userRole === 'super-admin') && (
+              {/* Add Water section for both citizens and water admins */}
+              {(userRole === 'citizen' || userRole === 'water-admin' || userRole === 'super-admin') && (
                 <NavLink to="/water" icon={<Droplet size={16} />} active={location.pathname === '/water'}>
                   Water
                 </NavLink>
               )}
-              {(userRole === 'energy-admin' || userRole === 'super-admin') && (
+              {/* Add Energy section for both citizens and energy admins */}
+              {(userRole === 'citizen' || userRole === 'energy-admin' || userRole === 'super-admin') && (
                 <NavLink to="/energy" icon={<Zap size={16} />} active={location.pathname === '/energy'}>
                   Energy
                 </NavLink>
@@ -148,10 +150,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             {userRole && (
               <>
                 <MobileNavLink to="/complaints" icon={<MessageSquare size={20} />} active={location.pathname.includes('/complaints')} />
-                {(userRole === 'water-admin' || userRole === 'super-admin') && (
+                {/* Add Water section for both citizens and water admins */}
+                {(userRole === 'citizen' || userRole === 'water-admin' || userRole === 'super-admin') && (
                   <MobileNavLink to="/water" icon={<Droplet size={20} />} active={location.pathname === '/water'} />
                 )}
-                {(userRole === 'energy-admin' || userRole === 'super-admin') && (
+                {/* Add Energy section for both citizens and energy admins */}
+                {(userRole === 'citizen' || userRole === 'energy-admin' || userRole === 'super-admin') && (
                   <MobileNavLink to="/energy" icon={<Zap size={20} />} active={location.pathname === '/energy'} />
                 )}
                 {userRole !== 'citizen' && (
