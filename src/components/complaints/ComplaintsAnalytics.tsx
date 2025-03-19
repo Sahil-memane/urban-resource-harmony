@@ -28,7 +28,6 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
   Radar,
-  ComposedChart,
 } from 'recharts';
 
 const COLORS = {
@@ -51,6 +50,16 @@ const COLORS = {
 
 type AnalyticsProps = {
   viewType?: 'overview' | 'trends' | 'predictions';
+};
+
+// Helper component for ComposedChart - renamed to CustomComposedChart to avoid conflicts
+const CustomComposedChart = (props: any) => {
+  const { data, children, ...rest } = props;
+  return (
+    <LineChart data={data} {...rest}>
+      {children}
+    </LineChart>
+  );
 };
 
 const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }) => {
@@ -875,7 +884,7 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   {userRole === 'water-admin' || userRole === 'energy-admin' ? (
-                    <ComposedChart data={analyticsData?.seasonalDemand}>
+                    <CustomComposedChart data={analyticsData?.seasonalDemand}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
                       <YAxis />
@@ -895,7 +904,7 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
                           <Line type="monotone" dataKey="peak" stroke="#ff7300" name="Peak Capacity (MW)" strokeDasharray="5 5" />
                         </>
                       )}
-                    </ComposedChart>
+                    </CustomComposedChart>
                   ) : (
                     <RadarChart data={analyticsData?.seasonalDemand}>
                       <PolarGrid />
@@ -1010,7 +1019,7 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   {userRole === 'water-admin' || userRole === 'energy-admin' ? (
-                    <ComposedChart data={analyticsData?.futureDemand}>
+                    <CustomComposedChart data={analyticsData?.futureDemand}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="year" />
                       <YAxis />
@@ -1019,7 +1028,7 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
                       <Bar dataKey="projected" fill="#8884d8" name="Projected Demand" />
                       <Line type="monotone" dataKey="sustainable" stroke="#82ca9d" name="Sustainable Supply" />
                       <Area dataKey="gap" fill="#ff7300" stroke="#ff7300" name="Supply Gap" />
-                    </ComposedChart>
+                    </CustomComposedChart>
                   ) : (
                     <LineChart data={analyticsData?.futureDemand}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -1168,7 +1177,7 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
           <CardContent>
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={analyticsData?.expectedVolume}>
+                <CustomComposedChart data={analyticsData?.expectedVolume}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis yAxisId="left" />
@@ -1177,7 +1186,7 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
                   <Legend />
                   <Bar yAxisId="left" dataKey="expected" fill="#8884d8" name="Expected Complaints" />
                   <Line yAxisId="right" type="monotone" dataKey="confidence" stroke="#82ca9d" name="Confidence %" />
-                </ComposedChart>
+                </CustomComposedChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
@@ -1232,16 +1241,6 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
       </div>
     );
   }
-};
-
-// Helper component for ComposedChart
-const ComposedChart = (props: any) => {
-  const { data, children, ...rest } = props;
-  return (
-    <LineChart data={data} {...rest}>
-      {children}
-    </LineChart>
-  );
 };
 
 export default ComplaintsAnalytics;
