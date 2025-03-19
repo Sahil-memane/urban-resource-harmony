@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
@@ -305,6 +304,7 @@ const Complaints = () => {
         case 'text':
           if (!complaintText.trim()) {
             toast.error('Please enter your complaint');
+            setIsSubmitting(false);
             return;
           }
           content = complaintText;
@@ -312,6 +312,7 @@ const Complaints = () => {
         case 'voice':
           if (!audioBlob) {
             toast.error('Please record your voice first');
+            setIsSubmitting(false);
             return;
           }
           
@@ -320,6 +321,7 @@ const Complaints = () => {
         case 'image':
           if (!selectedFile) {
             toast.error('Please upload an image or document');
+            setIsSubmitting(false);
             return;
           }
           content = `Image complaint: ${selectedFile.name || 'Image-based complaint'}`;
@@ -336,13 +338,6 @@ const Complaints = () => {
       if (activeTab === 'voice' && audioBlob) {
         const audioFile = new File([audioBlob], 'voice-recording.wav', { type: 'audio/wav' });
         
-        // Create the bucket if it doesn't exist
-        const { data: buckets } = await supabase.storage.listBuckets();
-        if (!buckets || !buckets.find(b => b.name === 'complaint-attachments')) {
-          console.log('Bucket not found, creating new bucket');
-          // Bucket will be created through config.toml, no action needed here
-        }
-        
         attachment_url = await uploadFile(audioFile, 'audio');
         
         if (!attachment_url) {
@@ -351,12 +346,6 @@ const Complaints = () => {
         }
         console.log('Uploaded audio file:', attachment_url);
       } else if (activeTab === 'image' && selectedFile) {
-        const { data: buckets } = await supabase.storage.listBuckets();
-        if (!buckets || !buckets.find(b => b.name === 'complaint-attachments')) {
-          console.log('Bucket not found, creating new bucket');
-          // Bucket will be created through config.toml, no action needed here
-        }
-        
         attachment_url = await uploadFile(selectedFile, 'image');
         
         if (!attachment_url) {

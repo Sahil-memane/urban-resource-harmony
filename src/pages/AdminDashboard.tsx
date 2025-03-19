@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { MessageSquare, CheckCircle } from 'lucide-react';
+import { MessageSquare, CheckCircle, Loader2 } from 'lucide-react';
 import AdminComplaintsList from '@/components/complaints/AdminComplaintsList';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
@@ -67,18 +67,27 @@ const AdminDashboard = () => {
       // Fetch pending complaints
       const { data: pendingData, error: pendingError } = await pendingQuery;
 
-      if (pendingError) throw pendingError;
+      if (pendingError) {
+        console.error('Error fetching pending complaints:', pendingError);
+        throw pendingError;
+      }
 
       // Fetch resolved complaints
       const { data: resolvedData, error: resolvedError } = await resolvedQuery;
 
-      if (resolvedError) throw resolvedError;
+      if (resolvedError) {
+        console.error('Error fetching resolved complaints:', resolvedError);
+        throw resolvedError;
+      }
+
+      console.log('Pending complaints:', pendingData);
+      console.log('Resolved complaints:', resolvedData);
 
       setPendingComplaints(pendingData || []);
       setResolvedComplaints(resolvedData || []);
     } catch (error: any) {
       console.error('Error fetching complaints:', error);
-      toast.error('Failed to load complaints');
+      toast.error('Failed to load complaints: ' + (error.message || 'Unknown error'));
     } finally {
       setIsDataLoading(false);
     }
@@ -124,7 +133,7 @@ const AdminDashboard = () => {
       toast.success('Complaint resolved successfully');
     } catch (error: any) {
       console.error('Error resolving complaint:', error);
-      toast.error('Failed to resolve complaint');
+      toast.error('Failed to resolve complaint: ' + (error.message || 'Unknown error'));
     }
   };
 
@@ -151,7 +160,8 @@ const AdminDashboard = () => {
     return (
       <MainLayout>
         <div className="flex items-center justify-center h-screen">
-          <p>Loading...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="ml-2">Loading...</p>
         </div>
       </MainLayout>
     );
@@ -207,18 +217,19 @@ const AdminDashboard = () => {
                 <TabsList className="mb-6">
                   <TabsTrigger value="pending" className="flex items-center gap-2">
                     <MessageSquare size={16} />
-                    <span>Pending Complaints</span>
+                    <span>Pending Complaints ({pendingComplaints.length})</span>
                   </TabsTrigger>
                   <TabsTrigger value="resolved" className="flex items-center gap-2">
                     <CheckCircle size={16} />
-                    <span>Resolved Complaints</span>
+                    <span>Resolved Complaints ({resolvedComplaints.length})</span>
                   </TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="pending">
                   {isDataLoading ? (
-                    <div className="text-center py-8">
-                      <p>Loading complaints...</p>
+                    <div className="flex justify-center items-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <p className="ml-2">Loading complaints...</p>
                     </div>
                   ) : pendingComplaints.length === 0 ? (
                     <div className="text-center py-12">
@@ -235,8 +246,9 @@ const AdminDashboard = () => {
                 
                 <TabsContent value="resolved">
                   {isDataLoading ? (
-                    <div className="text-center py-8">
-                      <p>Loading complaints...</p>
+                    <div className="flex justify-center items-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <p className="ml-2">Loading complaints...</p>
                     </div>
                   ) : resolvedComplaints.length === 0 ? (
                     <div className="text-center py-12">
