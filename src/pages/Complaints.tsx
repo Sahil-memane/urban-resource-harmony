@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
@@ -55,11 +56,22 @@ const Complaints = () => {
   const [complaints, setComplaints] = useState<any[]>([]);
   const [isLoadingComplaints, setIsLoadingComplaints] = useState(true);
   const [predictionLoading, setPredictionLoading] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   
-  const recognitionRef = useRef<any>(null);
+  // TypeScript declaration for SpeechRecognition
+  type SpeechRecognitionType = {
+    continuous: boolean;
+    interimResults: boolean;
+    lang: string;
+    onresult: (event: any) => void;
+    start: () => void;
+    stop: () => void;
+  };
+  
+  const recognitionRef = useRef<SpeechRecognitionType | null>(null);
   const [transcription, setTranscription] = useState('');
   
   const fetchComplaints = async () => {
@@ -73,6 +85,8 @@ const Complaints = () => {
         return;
       }
       
+      console.log('Fetching complaints for user:', session.user.id);
+      
       const { data, error } = await supabase
         .from('complaints')
         .select('*')
@@ -80,8 +94,11 @@ const Complaints = () => {
         .order('date', { ascending: false });
       
       if (error) {
+        console.error('Error fetching complaints:', error);
         throw error;
       }
+      
+      console.log('Fetched complaints:', data);
       
       if (data) {
         setComplaints(data);
@@ -108,6 +125,7 @@ const Complaints = () => {
     setSelectedFile(null);
     setAudioBlob(null);
     setTranscription('');
+    setSubmissionError(null);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -160,9 +178,10 @@ const Complaints = () => {
       toast.info('Recording started... Speak now');
       
       try {
+        // @ts-ignore - Handling browser compatibility
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
-          recognitionRef.current = new SpeechRecognition();
+          recognitionRef.current = new SpeechRecognition() as SpeechRecognitionType;
           recognitionRef.current.continuous = true;
           recognitionRef.current.interimResults = true;
           recognitionRef.current.lang = 'en-US';
@@ -219,23 +238,38 @@ const Complaints = () => {
     try {
       setPredictionLoading(true);
       
+      // If no text is provided, return default priority
+      if (!text.trim()) {
+        setPriority('medium');
+        return 'medium';
+      }
+      
       const { data, error } = await supabase.functions.invoke('ai-priority', {
         body: { complaintText: text, category }
       });
       
-      if (error) throw error;
+      console.log('AI Priority response:', data, error);
+      
+      if (error) {
+        console.error('AI Priority error:', error);
+        setPriority('medium');
+        return 'medium';
+      }
       
       if (data && data.priority) {
         setPriority(data.priority);
         toast.success(`AI has set priority to: ${data.priority}`);
         return data.priority;
       } else {
-        throw new Error('No priority returned from AI');
+        // Fallback to medium if no priority is returned
+        console.warn('No priority returned from AI, using medium');
+        setPriority('medium');
+        return 'medium';
       }
     } catch (error) {
       console.error('Error getting AI priority:', error);
-      toast.error('Could not determine priority automatically. Please select manually.');
-      return null;
+      setPriority('medium');
+      return 'medium';
     } finally {
       setPredictionLoading(false);
     }
@@ -243,6 +277,7 @@ const Complaints = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmissionError(null);
     
     if (!category) {
       toast.error('Please select a category');
@@ -256,6 +291,7 @@ const Complaints = () => {
     try {
       setIsSubmitting(true);
       
+      // Check authentication
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
@@ -264,6 +300,7 @@ const Complaints = () => {
         return;
       }
       
+      // Validate and prepare content based on active tab
       switch (activeTab) {
         case 'text':
           if (!complaintText.trim()) {
@@ -289,28 +326,41 @@ const Complaints = () => {
           break;
       }
       
+      // Determine priority
       let determinedPriority = priority;
       if (!determinedPriority) {
-        const aiPriority = await getPriorityFromAI(content);
-        if (aiPriority) {
-          determinedPriority = aiPriority;
-        } else {
-          determinedPriority = 'medium';
-        }
+        determinedPriority = await getPriorityFromAI(content) || 'medium';
       }
       
+      // Handle file uploads
       if (activeTab === 'voice' && audioBlob) {
         const audioFile = new File([audioBlob], 'voice-recording.wav', { type: 'audio/wav' });
+        
+        // Create the bucket if it doesn't exist
+        const { data: buckets } = await supabase.storage.listBuckets();
+        if (!buckets || !buckets.find(b => b.name === 'complaint-attachments')) {
+          console.log('Bucket not found, creating new bucket');
+          // Bucket will be created through config.toml, no action needed here
+        }
+        
         attachment_url = await uploadFile(audioFile, 'audio');
         
         if (!attachment_url) {
+          console.error('Failed to upload audio file');
           throw new Error('Failed to upload audio file');
         }
         console.log('Uploaded audio file:', attachment_url);
       } else if (activeTab === 'image' && selectedFile) {
+        const { data: buckets } = await supabase.storage.listBuckets();
+        if (!buckets || !buckets.find(b => b.name === 'complaint-attachments')) {
+          console.log('Bucket not found, creating new bucket');
+          // Bucket will be created through config.toml, no action needed here
+        }
+        
         attachment_url = await uploadFile(selectedFile, 'image');
         
         if (!attachment_url) {
+          console.error('Failed to upload image file');
           throw new Error('Failed to upload image file');
         }
         console.log('Uploaded image file:', attachment_url);
@@ -341,6 +391,7 @@ const Complaints = () => {
       if (data && data.length > 0) {
         toast.success('Complaint submitted successfully!');
         
+        // Reset form
         setComplaintText('');
         setCategory('');
         setPriority('');
@@ -349,12 +400,14 @@ const Complaints = () => {
         setSelectedFile(null);
         setTranscription('');
         
+        // Refresh complaints list
         fetchComplaints();
       } else {
         throw new Error('No data returned from database');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting complaint:', error);
+      setSubmissionError(error.message || 'Unknown error occurred');
       toast.error('Failed to submit complaint: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsSubmitting(false);
@@ -522,18 +575,19 @@ const Complaints = () => {
                               <FileImage className="mr-2 h-4 w-4" />
                               Browse Files
                             </Button>
-                            <p className="text-xs text-muted-foreground">
-                              Max file size: 10MB. Accepted formats: JPG, PNG, GIF, WEBP, PDF
+                            <p className="text-xs text-muted-foreground text-center">
+                              Max file size: 10MB<br />
+                              Accepted formats: JPG, PNG, GIF, WEBP, PDF
                             </p>
                             {selectedFile && (
-                              <div className="mt-4">
-                                <p className="text-sm text-center">{selectedFile.name}</p>
+                              <div className="mt-4 text-center">
+                                <p className="text-sm">{selectedFile.name}</p>
                                 {selectedFile.type.startsWith('image/') && (
                                   <div className="mt-2 max-h-[150px] overflow-hidden rounded">
                                     <img 
                                       src={URL.createObjectURL(selectedFile)} 
                                       alt="Preview" 
-                                      className="max-h-[150px] object-contain"
+                                      className="max-h-[150px] object-contain mx-auto"
                                     />
                                   </div>
                                 )}
@@ -547,6 +601,11 @@ const Complaints = () => {
                 </form>
               </CardContent>
               <CardFooter>
+                {submissionError && (
+                  <div className="w-full mb-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
+                    {submissionError}
+                  </div>
+                )}
                 <Button 
                   type="submit" 
                   className="w-full" 

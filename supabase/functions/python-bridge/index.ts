@@ -41,12 +41,15 @@ serve(async (req) => {
   } catch (error) {
     console.error('Python bridge error:', error);
     
+    // More robust error handling with fallback
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Error connecting to Python server'
+        error: error.message || 'Error connecting to Python server',
+        fallback: true, // Indicate this is a fallback response
+        status: "error"
       }),
       { 
-        status: 500,
+        status: 200, // Return 200 to allow client fallback
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
