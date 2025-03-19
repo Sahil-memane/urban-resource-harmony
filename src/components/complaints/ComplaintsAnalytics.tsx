@@ -647,9 +647,9 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
                     ))}
                   </Bar>
                 </BarChart>
-              </div>
-            </CardContent>
-          </Card>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
         </Card>
 
         {userRole !== 'citizen' && (
@@ -799,9 +799,10 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
                     name="Energy"
                   />
                 </AreaChart>
-              </div>
-            </CardContent>
-          </Card>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* PCMC Consumption Trends */}
         {analyticsData?.consumptionTrends && (
@@ -930,9 +931,10 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
                   <Bar yAxisId="left" dataKey="count" fill="#8884d8" name="Total Complaints" />
                   <Bar yAxisId="right" dataKey="recurringRate" fill="#82ca9d" name="Recurring Rate %" />
                 </BarChart>
-              </div>
-            </CardContent>
-          </Card>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Efficiency Metrics */}
         {analyticsData?.efficiencyMetrics && (
@@ -1176,9 +1178,9 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
                   <Bar yAxisId="left" dataKey="expected" fill="#8884d8" name="Expected Complaints" />
                   <Line yAxisId="right" type="monotone" dataKey="confidence" stroke="#82ca9d" name="Confidence %" />
                 </ComposedChart>
-              </div>
-            </CardContent>
-          </Card>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
         </Card>
 
         {/* Resolution Time Predictions */}
@@ -1198,9 +1200,9 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
                   <Bar dataKey="current" fill="#8884d8" name="Current (days)" />
                   <Bar dataKey="predicted" fill="#82ca9d" name="Predicted (days)" />
                 </BarChart>
-              </div>
-            </CardContent>
-          </Card>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
         </Card>
 
         {/* Resource Allocation Recommendations */}
@@ -1223,9 +1225,9 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
                   <Bar dataKey="current" fill="#8884d8" name="Current %" />
                   <Bar dataKey="recommended" fill="#82ca9d" name="Recommended %" />
                 </BarChart>
-              </div>
-            </CardContent>
-          </Card>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
         </Card>
       </div>
     );
