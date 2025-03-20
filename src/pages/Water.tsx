@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import MainLayout from '@/components/layout/MainLayout';
@@ -433,15 +432,15 @@ const Water = () => {
         <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="mb-6">
             <TabsTrigger value="overview" className="flex items-center gap-2">
-              <BarChart size={16} />
+              <BarChart className="h-4 w-4" />
               <span>Overview</span>
             </TabsTrigger>
             <TabsTrigger value="trends" className="flex items-center gap-2">
-              <TrendingUp size={16} />
+              <TrendingUp className="h-4 w-4" />
               <span>Trends</span>
             </TabsTrigger>
             <TabsTrigger value="predictions" className="flex items-center gap-2">
-              <PieChart size={16} />
+              <PieChartIcon className="h-4 w-4" />
               <span>Predictions</span>
             </TabsTrigger>
           </TabsList>
