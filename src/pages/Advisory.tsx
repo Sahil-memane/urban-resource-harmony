@@ -2,386 +2,274 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import MainLayout from '@/components/layout/MainLayout';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Droplet, 
-  Zap, 
-  AlertTriangle, 
-  Lightbulb,
+import {
+  Droplet,
+  Zap,
+  AlertTriangle,
   Info,
-  RefreshCw
+  Lightbulb,
+  Link as LinkIcon,
+  FileText,
+  Download,
+  Calendar
 } from 'lucide-react';
+import { useUserRole } from '@/hooks/useUserRole';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
 const Advisory = () => {
-  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('current');
+  const { userRole } = useUserRole();
+  const [advisories, setAdvisories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [advisoryData, setAdvisoryData] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState('water');
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [complaints, setComplaints] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchAdvisoryData();
+    // Fetch complaints for analytics to generate advisories
+    fetchComplaints();
   }, []);
 
-  const fetchAdvisoryData = async (forceRefresh = false) => {
+  useEffect(() => {
+    // Generate dynamic advisories based on user role and complaints data
+    if (complaints.length > 0) {
+      generateAdvisories();
+    }
+  }, [complaints, userRole]);
+
+  const fetchComplaints = async () => {
     try {
       setIsLoading(true);
-      
-      if (forceRefresh) {
-        setIsRefreshing(true);
+
+      const { data, error } = await supabase
+        .from('complaints')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (error) {
+        throw error;
       }
 
-      // Try to fetch from the Python server via the Edge Function
-      try {
-        console.log('Fetching advisory data from server...');
-        
-        const { data, error } = await supabase.functions.invoke('python-bridge', {
-          body: { 
-            endpoint: 'fetch_advisory_data',
-            data: { forceRefresh }
-          }
-        });
-        
-        if (error) {
-          throw error;
-        }
-        
-        if (data?.data) {
-          console.log('Advisory data:', data.data);
-          setAdvisoryData(data.data);
-          toast.success('Advisory data updated successfully');
-        } else {
-          throw new Error('No data received from server');
-        }
+      console.log("Fetched complaints for advisory:", data?.length || 0);
 
-      } catch (error) {
-        console.error('Error fetching advisory data:', error);
-        
-        // Fallback to mock data
-        const mockData = generateMockAdvisoryData();
-        setAdvisoryData(mockData);
-        
-        toast.error('Could not fetch live advisory data, showing sample data');
+      if (data && data.length > 0) {
+        setComplaints(data);
+      } else {
+        // If no real data is available, use mock data for demonstration
+        console.log("No complaints found, using mock data");
+        setIsLoading(false); // Set loading to false before generating mock advisories
       }
-
     } catch (error) {
-      console.error('Error in fetchAdvisoryData:', error);
-      toast.error('Failed to load advisory information');
-      
-      // Set mock data as fallback
-      setAdvisoryData(generateMockAdvisoryData());
-      
+      console.error('Error fetching complaints:', error);
+      toast.error('Failed to load complaints data');
     } finally {
       setIsLoading(false);
-      setIsRefreshing(false);
     }
   };
 
-  const handleRefresh = () => {
-    fetchAdvisoryData(true);
-    toast.success('Refreshing advisory data...');
+  const generateAdvisories = () => {
+    // Analyze complaints data to generate dynamic advisories
+    const waterAdvisories = generateWaterAdvisories();
+    const energyAdvisories = generateEnergyAdvisories();
+
+    // Filter advisories based on user role
+    if (userRole === 'water-admin') {
+      setAdvisories([...waterAdvisories]);
+    } else if (userRole === 'energy-admin') {
+      setAdvisories([...energyAdvisories]);
+    } else if (userRole === 'super-admin') {
+      setAdvisories([...waterAdvisories, ...energyAdvisories]);
+    } else {
+      // For citizens, show a mix of advisories most relevant to them
+      setAdvisories([...waterAdvisories.slice(0, 3), ...energyAdvisories.slice(0, 3)]);
+    }
   };
 
-  const generateMockAdvisoryData = () => {
-    // Create mock advisory data for both water and energy
-    return {
-      water: {
-        current: [
-          {
-            id: 1,
-            title: "Summer Conservation Advisory",
-            category: "conservation",
-            severity: "medium",
-            content: "Based on seasonal patterns, water supply pressure may be reduced during April-May. Consider storing water and reporting any leakages promptly. Residents are advised to use water judiciously during peak summer.",
-            date: "2024-05-01",
-            expires: "2024-06-15"
-          },
-          {
-            id: 2,
-            title: "Water Quality Notice",
-            category: "quality",
-            severity: "low",
-            content: "Recent testing shows increased turbidity levels in some areas of Pimpri. While water remains safe for consumption, residents may notice slight discoloration. Running taps for 30 seconds before use is recommended.",
-            date: "2024-05-10",
-            expires: "2024-05-25"
-          },
-          {
-            id: 3,
-            title: "Pipeline Maintenance Alert",
-            category: "maintenance",
-            severity: "medium",
-            content: "Scheduled maintenance of the main pipeline from Pavana Dam will affect water supply in sectors 23-28 on May 20th. Supply will be limited to 2 hours (6-8 AM) instead of the regular schedule. Please store water accordingly.",
-            date: "2024-05-15",
-            expires: "2024-05-21"
-          }
-        ],
-        seasonal: {
-          summer: "Water demand typically increases by 30% during April-June. Install water-efficient fixtures to reduce consumption. Consider rainwater harvesting systems before monsoon starts.",
-          monsoon: "During monsoon season, water quality may be affected due to increased turbidity. Use additional filtration and report any discoloration immediately.",
-          winter: "Winter is ideal for maintenance of water storage systems. Check for leaks in home plumbing and fix them to prevent water wastage.",
-          autumn: "Post-monsoon is a good time to clean water tanks and storage units to prevent contamination."
-        },
-        tips: [
-          "Fix leaking taps - a dripping tap can waste up to 20,000 liters annually",
-          "Use bucket instead of shower when possible - saves up to 80% water",
-          "Install dual-flush toilets to reduce water consumption",
-          "Water plants during early morning or evening to reduce evaporation",
-          "Reuse RO reject water for cleaning or gardening"
-        ]
-      },
-      energy: {
-        current: [
-          {
-            id: 1,
-            title: "Peak Load Management Advisory",
-            category: "load",
-            severity: "high",
-            content: "Energy demand is expected to peak during summer months. Minimize usage during 6-10 PM to avoid potential outages and higher tariffs. Industries are requested to optimize their energy-intensive operations outside peak hours.",
-            date: "2024-05-01",
-            expires: "2024-06-30"
-          },
-          {
-            id: 2,
-            title: "Scheduled Maintenance Outage",
-            category: "maintenance",
-            severity: "medium",
-            content: "MSEDCL will conduct preventive maintenance on the Chinchwad substation on May 25th. Areas affected include Sectors 18-22, with planned outage from 10 AM to 2 PM. Please plan accordingly.",
-            date: "2024-05-18",
-            expires: "2024-05-26"
-          },
-          {
-            id: 3,
-            title: "Solar Subsidy Program",
-            category: "sustainability",
-            severity: "low",
-            content: "PCMC has announced additional subsidies for rooftop solar installations. Residential buildings can avail up to 40% subsidy for systems installed before September 2024. Apply through the PCMC Energy portal.",
-            date: "2024-05-10",
-            expires: "2024-09-30"
-          }
-        ],
-        seasonal: {
-          summer: "Energy consumption increases 40-60% during summer months due to cooling needs. Set ACs to 24-26°C and use fans in conjunction to reduce load.",
-          monsoon: "During monsoon, risk of electrical hazards increases. Ensure proper insulation and earthing of electrical systems.",
-          winter: "Winter sees reduced solar generation. If you have solar panels, adjust your consumption patterns accordingly.",
-          autumn: "Autumn is ideal for electrical system maintenance. Schedule inspections for inverters, generators and main supply lines."
-        },
-        tips: [
-          "Replace conventional lights with LEDs - saves up to 80% energy",
-          "Use star-rated appliances to reduce electricity consumption",
-          "Set refrigerator temperature to 4-5°C for optimal efficiency",
-          "Use power strips to eliminate phantom loads from devices",
-          "Consider time-of-day usage to avoid peak tariffs (typically 6-10 PM)"
-        ]
+  const generateWaterAdvisories = () => {
+    // Analyze water-related complaints to generate relevant advisories
+    const waterComplaints = complaints.filter(c => c.category === 'water');
+    const highPriorityCount = waterComplaints.filter(c => c.priority === 'high').length;
+    const lowPressureCount = waterComplaints.filter(c => c.content.toLowerCase().includes('pressure')).length;
+    const qualityIssueCount = waterComplaints.filter(c => 
+      c.content.toLowerCase().includes('quality') || 
+      c.content.toLowerCase().includes('contamination') ||
+      c.content.toLowerCase().includes('dirty')
+    ).length;
+    
+    const currentMonth = new Date().getMonth();
+    const isWaterScarcitySeason = currentMonth >= 2 && currentMonth <= 5; // March to June
+
+    const advisories = [
+      {
+        title: isWaterScarcitySeason ? "Seasonal Low Pressure Alert" : "Water Conservation Reminder",
+        description: isWaterScarcitySeason 
+          ? "Based on seasonal patterns, water supply pressure may be reduced during summer months. Consider storing water and reporting any leakages promptly."
+          : "Current water usage is approaching seasonal averages. To optimize resources, consider using washing machines with full loads only and fixing any leaking taps.",
+        category: "water",
+        severity: isWaterScarcitySeason ? "medium" : "low",
+        icon: <Droplet className="h-5 w-5 text-blue-600" />,
+        date: new Date().toISOString()
       }
-    };
+    ];
+
+    // Add additional advisories based on complaint patterns
+    if (highPriorityCount > 5) {
+      advisories.push({
+        title: "Increase in Critical Water Issues",
+        description: `There has been a significant increase in high-priority water-related issues. Municipal teams are working to address these concerns with priority.`,
+        category: "water",
+        severity: "high",
+        icon: <Droplet className="h-5 w-5 text-blue-600" />,
+        date: new Date().toISOString()
+      });
+    }
+
+    if (lowPressureCount > 3) {
+      advisories.push({
+        title: "Water Pressure Management Notice",
+        description: "Multiple reports of low water pressure have been received. Engineers are investigating the water distribution network. Consider storing water during supply hours as a precaution.",
+        category: "water",
+        severity: "medium",
+        icon: <Droplet className="h-5 w-5 text-blue-600" />,
+        date: new Date().toISOString()
+      });
+    }
+
+    if (qualityIssueCount > 0) {
+      advisories.push({
+        title: "Water Quality Monitoring Update",
+        description: "Some reports of water quality concerns have been received. Water testing teams are conducting additional tests. As a precaution, consider boiling water for drinking purposes.",
+        category: "water",
+        severity: "medium",
+        icon: <Droplet className="h-5 w-5 text-blue-600" />,
+        date: new Date().toISOString()
+      });
+    }
+
+    // Add seasonal advisory
+    if (currentMonth >= 5 && currentMonth <= 8) { // June to September (monsoon)
+      advisories.push({
+        title: "Monsoon Water Management",
+        description: "During monsoon season, water may appear slightly cloudy due to increased turbidity. Our treatment plants are operating at enhanced capacity to maintain quality standards.",
+        category: "water",
+        severity: "low",
+        icon: <Droplet className="h-5 w-5 text-blue-600" />,
+        date: new Date().toISOString()
+      });
+    }
+
+    return advisories;
   };
 
-  const renderWaterAdvisoryTab = () => {
-    if (!advisoryData?.water) return null;
-    const { current, seasonal, tips } = advisoryData.water;
+  const generateEnergyAdvisories = () => {
+    // Analyze energy-related complaints to generate relevant advisories
+    const energyComplaints = complaints.filter(c => c.category === 'energy');
+    const outageCount = energyComplaints.filter(c => 
+      c.content.toLowerCase().includes('outage') || 
+      c.content.toLowerCase().includes('no power') ||
+      c.content.toLowerCase().includes('power cut')
+    ).length;
+    const fluctuationCount = energyComplaints.filter(c => 
+      c.content.toLowerCase().includes('fluctuation') || 
+      c.content.toLowerCase().includes('voltage')
+    ).length;
+    
+    const currentMonth = new Date().getMonth();
+    const isSummerPeakSeason = currentMonth >= 3 && currentMonth <= 6; // April to July
 
-    return (
-      <div className="space-y-6">
-        <h2 className="text-2xl font-bold flex items-center gap-2">
-          <Droplet className="h-6 w-6 text-blue-500" />
-          <span>Current Water Advisories</span>
-        </h2>
-        
-        {current.map((advisory: any) => (
-          <Card key={advisory.id} className={`
-            ${advisory.severity === 'high' ? 'border-red-200 bg-red-50 dark:bg-red-950/20' : 
-              advisory.severity === 'medium' ? 'border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20' : 
-              'border-blue-200 bg-blue-50 dark:bg-blue-950/20'}
-          `}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {advisory.severity === 'high' ? (
-                    <AlertTriangle className="h-5 w-5 text-red-600" />
-                  ) : advisory.severity === 'medium' ? (
-                    <Info className="h-5 w-5 text-yellow-600" />
-                  ) : (
-                    <Lightbulb className="h-5 w-5 text-blue-600" />
-                  )}
-                  <CardTitle className={`
-                    ${advisory.severity === 'high' ? 'text-red-800 dark:text-red-400' : 
-                      advisory.severity === 'medium' ? 'text-yellow-800 dark:text-yellow-400' : 
-                      'text-blue-800 dark:text-blue-400'}
-                  `}>
-                    {advisory.title}
-                  </CardTitle>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Valid until: {advisory.expires}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className={`
-                ${advisory.severity === 'high' ? 'text-red-800 dark:text-red-400' : 
-                  advisory.severity === 'medium' ? 'text-yellow-800 dark:text-yellow-400' : 
-                  'text-blue-800 dark:text-blue-400'}
-              `}>
-                {advisory.content}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+    const advisories = [
+      {
+        title: isSummerPeakSeason ? "Peak Load Warning" : "Energy Conservation Tips",
+        description: isSummerPeakSeason
+          ? "Energy demand is expected to peak between 6-10 PM. To prevent outages, minimize usage of high-consumption appliances during these hours."
+          : "Setting your AC temperature to 24°C instead of 22°C can reduce your power consumption by up to 10% while maintaining comfort.",
+        category: "energy",
+        severity: isSummerPeakSeason ? "medium" : "low",
+        icon: <Zap className="h-5 w-5 text-yellow-600" />,
+        date: new Date().toISOString()
+      }
+    ];
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Seasonal Water Recommendations</CardTitle>
-            <CardDescription>Advice based on seasonal water patterns in PCMC</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-semibold text-lg mb-2">Summer (Mar-Jun)</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{seasonal.summer}</p>
-                </div>
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-semibold text-lg mb-2">Monsoon (Jul-Sep)</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{seasonal.monsoon}</p>
-                </div>
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-semibold text-lg mb-2">Autumn (Oct-Nov)</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{seasonal.autumn}</p>
-                </div>
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-semibold text-lg mb-2">Winter (Dec-Feb)</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{seasonal.winter}</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+    // Add additional advisories based on complaint patterns
+    if (outageCount > 3) {
+      advisories.push({
+        title: "Power Distribution Update",
+        description: "We've noticed an increase in power outage reports. Our teams are working to improve grid stability. Consider keeping emergency lights charged as a precaution.",
+        category: "energy",
+        severity: "high",
+        icon: <Zap className="h-5 w-5 text-yellow-600" />,
+        date: new Date().toISOString()
+      });
+    }
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Water Conservation Tips</CardTitle>
-            <CardDescription>Simple steps to reduce water consumption</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {tips.map((tip: string, index: number) => (
-                <li key={index} className="flex items-start gap-2">
-                  <Lightbulb className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
-                  <span>{tip}</span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    if (fluctuationCount > 2) {
+      advisories.push({
+        title: "Voltage Stabilization Notice",
+        description: "Reports of power fluctuations have increased in some areas. Consider using voltage stabilizers for sensitive electronic equipment until our grid enhancement is complete.",
+        category: "energy",
+        severity: "medium",
+        icon: <Zap className="h-5 w-5 text-yellow-600" />,
+        date: new Date().toISOString()
+      });
+    }
+
+    // Add seasonal advisory
+    if (currentMonth >= 5 && currentMonth <= 8) { // June to September (monsoon)
+      advisories.push({
+        title: "Monsoon Electrical Safety",
+        description: "During monsoon season, be extra cautious with electrical equipment. Avoid using electrical appliances during thunderstorms and check for water leakage near electrical points.",
+        category: "energy",
+        severity: "medium",
+        icon: <Zap className="h-5 w-5 text-yellow-600" />,
+        date: new Date().toISOString()
+      });
+    }
+
+    return advisories;
   };
 
-  const renderEnergyAdvisoryTab = () => {
-    if (!advisoryData?.energy) return null;
-    const { current, seasonal, tips } = advisoryData.energy;
+  // Helper function to get severity class
+  const getSeverityClass = (severity: string) => {
+    switch(severity) {
+      case 'high':
+        return 'border-red-200 bg-red-50 dark:bg-red-950/20';
+      case 'medium':
+        return 'border-orange-200 bg-orange-50 dark:bg-orange-950/20';
+      case 'low':
+        return 'border-green-200 bg-green-50 dark:bg-green-950/20';
+      default:
+        return 'border-gray-200 bg-gray-50 dark:bg-gray-950/20';
+    }
+  };
 
-    return (
-      <div className="space-y-6">
-        <h2 className="text-2xl font-bold flex items-center gap-2">
-          <Zap className="h-6 w-6 text-yellow-500" />
-          <span>Current Energy Advisories</span>
-        </h2>
-        
-        {current.map((advisory: any) => (
-          <Card key={advisory.id} className={`
-            ${advisory.severity === 'high' ? 'border-red-200 bg-red-50 dark:bg-red-950/20' : 
-              advisory.severity === 'medium' ? 'border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20' : 
-              'border-green-200 bg-green-50 dark:bg-green-950/20'}
-          `}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {advisory.severity === 'high' ? (
-                    <AlertTriangle className="h-5 w-5 text-red-600" />
-                  ) : advisory.severity === 'medium' ? (
-                    <Info className="h-5 w-5 text-yellow-600" />
-                  ) : (
-                    <Lightbulb className="h-5 w-5 text-green-600" />
-                  )}
-                  <CardTitle className={`
-                    ${advisory.severity === 'high' ? 'text-red-800 dark:text-red-400' : 
-                      advisory.severity === 'medium' ? 'text-yellow-800 dark:text-yellow-400' : 
-                      'text-green-800 dark:text-green-400'}
-                  `}>
-                    {advisory.title}
-                  </CardTitle>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Valid until: {advisory.expires}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className={`
-                ${advisory.severity === 'high' ? 'text-red-800 dark:text-red-400' : 
-                  advisory.severity === 'medium' ? 'text-yellow-800 dark:text-yellow-400' : 
-                  'text-green-800 dark:text-green-400'}
-              `}>
-                {advisory.content}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+  // Helper function to get severity text color
+  const getSeverityTextColor = (severity: string) => {
+    switch(severity) {
+      case 'high':
+        return 'text-red-700 dark:text-red-400';
+      case 'medium':
+        return 'text-orange-700 dark:text-orange-400';
+      case 'low':
+        return 'text-green-700 dark:text-green-400';
+      default:
+        return 'text-gray-700 dark:text-gray-400';
+    }
+  };
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Seasonal Energy Recommendations</CardTitle>
-            <CardDescription>Advice based on seasonal energy patterns in PCMC</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-semibold text-lg mb-2">Summer (Mar-Jun)</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{seasonal.summer}</p>
-                </div>
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-semibold text-lg mb-2">Monsoon (Jul-Sep)</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{seasonal.monsoon}</p>
-                </div>
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-semibold text-lg mb-2">Autumn (Oct-Nov)</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{seasonal.autumn}</p>
-                </div>
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-semibold text-lg mb-2">Winter (Dec-Feb)</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{seasonal.winter}</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Energy Conservation Tips</CardTitle>
-            <CardDescription>Simple steps to reduce energy consumption</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {tips.map((tip: string, index: number) => (
-                <li key={index} className="flex items-start gap-2">
-                  <Lightbulb className="h-5 w-5 text-yellow-500 shrink-0 mt-0.5" />
-                  <span>{tip}</span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  // Helper function to get category icon
+  const getCategoryIcon = (category: string) => {
+    switch(category) {
+      case 'water':
+        return <Droplet className="h-5 w-5 text-blue-600" />;
+      case 'energy':
+        return <Zap className="h-5 w-5 text-yellow-600" />;
+      default:
+        return <Info className="h-5 w-5 text-gray-600" />;
+    }
   };
 
   if (isLoading) {
@@ -389,7 +277,7 @@ const Advisory = () => {
       <MainLayout>
         <div className="flex items-center justify-center h-screen">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="ml-2">Loading advisory information...</p>
+          <p className="ml-2">Loading advisories...</p>
         </div>
       </MainLayout>
     );
@@ -406,45 +294,312 @@ const Advisory = () => {
       >
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold mb-2">PCMC Resource Advisory</h1>
+            <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
+              <Lightbulb className="h-8 w-8 text-amber-500" />
+              PCMC Advisories
+            </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              Current advisories, seasonal recommendations, and conservation tips for water and energy resources
+              Important notices and recommendations based on real-time resource monitoring and complaint analytics.
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="gap-2"
-          >
-            {isRefreshing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            <span>Refresh Data</span>
-          </Button>
+          
+          <div className="flex gap-2">
+            <Button variant="outline" asChild className="gap-2">
+              <Link to="/water">
+                <Droplet className="h-4 w-4" />
+                <span className="hidden sm:inline">Water Resources</span>
+              </Link>
+            </Button>
+            <Button variant="outline" asChild className="gap-2">
+              <Link to="/energy">
+                <Zap className="h-4 w-4" />
+                <span className="hidden sm:inline">Energy Resources</span>
+              </Link>
+            </Button>
+          </div>
         </div>
-
-        <Tabs defaultValue="water" value={activeTab} onValueChange={setActiveTab} className="w-full">
+        
+        <Tabs defaultValue="current" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="mb-6">
+            <TabsTrigger value="current" className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              <span>Current Advisories</span>
+            </TabsTrigger>
             <TabsTrigger value="water" className="flex items-center gap-2">
-              <Droplet size={16} />
-              <span>Water Advisory</span>
+              <Droplet className="h-4 w-4" />
+              <span>Water</span>
             </TabsTrigger>
             <TabsTrigger value="energy" className="flex items-center gap-2">
-              <Zap size={16} />
-              <span>Energy Advisory</span>
+              <Zap className="h-4 w-4" />
+              <span>Energy</span>
             </TabsTrigger>
           </TabsList>
           
+          <TabsContent value="current">
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 gap-4">
+                {advisories.length > 0 ? (
+                  advisories.map((advisory, index) => (
+                    <Card key={index} className={`${getSeverityClass(advisory.severity)}`}>
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-2">
+                            {advisory.icon}
+                            <CardTitle className={`text-lg ${getSeverityTextColor(advisory.severity)}`}>
+                              {advisory.title}
+                            </CardTitle>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs font-medium uppercase px-2 py-1 rounded-full bg-black/5 dark:bg-white/10">
+                            {advisory.category === 'water' ? (
+                              <Droplet className="h-3 w-3 text-blue-600" />
+                            ) : (
+                              <Zap className="h-3 w-3 text-yellow-600" />
+                            )}
+                            <span>{advisory.category}</span>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <p className={`${getSeverityTextColor(advisory.severity)}`}>{advisory.description}</p>
+                        
+                        {advisory.severity === 'high' && (
+                          <div className="mt-4 flex items-center justify-end">
+                            <Button variant="outline" size="sm" asChild className="gap-2">
+                              <Link to={advisory.category === 'water' ? '/water' : '/energy'}>
+                                <LinkIcon className="h-3 w-3" />
+                                <span>More Information</span>
+                              </Link>
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <Info className="h-12 w-12 text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-medium">No active advisories</h3>
+                        <p className="text-muted-foreground mt-1 max-w-md">
+                          There are currently no active advisories for your area. Check back later for updates.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </div>
+          </TabsContent>
+          
           <TabsContent value="water">
-            {renderWaterAdvisoryTab()}
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 gap-4">
+                {advisories.filter(a => a.category === 'water').length > 0 ? (
+                  advisories
+                    .filter(a => a.category === 'water')
+                    .map((advisory, index) => (
+                      <Card key={index} className={`${getSeverityClass(advisory.severity)}`}>
+                        <CardHeader className="pb-2">
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-2">
+                              {advisory.icon}
+                              <CardTitle className={`text-lg ${getSeverityTextColor(advisory.severity)}`}>
+                                {advisory.title}
+                              </CardTitle>
+                            </div>
+                            <div className="flex items-center gap-1 text-xs font-medium uppercase px-2 py-1 rounded-full bg-black/5 dark:bg-white/10">
+                              <Droplet className="h-3 w-3 text-blue-600" />
+                              <span>water</span>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <p className={`${getSeverityTextColor(advisory.severity)}`}>{advisory.description}</p>
+                          
+                          {advisory.severity === 'high' && (
+                            <div className="mt-4 flex items-center justify-end">
+                              <Button variant="outline" size="sm" asChild className="gap-2">
+                                <Link to="/water">
+                                  <LinkIcon className="h-3 w-3" />
+                                  <span>More Information</span>
+                                </Link>
+                              </Button>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))
+                ) : (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <Droplet className="h-12 w-12 text-blue-300 mb-4" />
+                        <h3 className="text-lg font-medium">No water advisories</h3>
+                        <p className="text-muted-foreground mt-1 max-w-md">
+                          There are currently no active water advisories for your area.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Water Conservation Tips</CardTitle>
+                  <CardDescription>Simple ways to save water in your daily life</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                        <span className="font-medium text-blue-600">1</span>
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Fix leaking taps</h4>
+                        <p className="text-sm text-muted-foreground">A dripping tap can waste up to 15 liters per day. Fix leaking taps promptly.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                        <span className="font-medium text-blue-600">2</span>
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Use water-efficient fixtures</h4>
+                        <p className="text-sm text-muted-foreground">Install low-flow showerheads and dual-flush toilets to reduce water consumption.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                        <span className="font-medium text-blue-600">3</span>
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Harvest rainwater</h4>
+                        <p className="text-sm text-muted-foreground">Collect rainwater for gardening and cleaning purposes.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                        <span className="font-medium text-blue-600">4</span>
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Full loads only</h4>
+                        <p className="text-sm text-muted-foreground">Run washing machines and dishwashers only when fully loaded.</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
           
           <TabsContent value="energy">
-            {renderEnergyAdvisoryTab()}
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 gap-4">
+                {advisories.filter(a => a.category === 'energy').length > 0 ? (
+                  advisories
+                    .filter(a => a.category === 'energy')
+                    .map((advisory, index) => (
+                      <Card key={index} className={`${getSeverityClass(advisory.severity)}`}>
+                        <CardHeader className="pb-2">
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-2">
+                              {advisory.icon}
+                              <CardTitle className={`text-lg ${getSeverityTextColor(advisory.severity)}`}>
+                                {advisory.title}
+                              </CardTitle>
+                            </div>
+                            <div className="flex items-center gap-1 text-xs font-medium uppercase px-2 py-1 rounded-full bg-black/5 dark:bg-white/10">
+                              <Zap className="h-3 w-3 text-yellow-600" />
+                              <span>energy</span>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <p className={`${getSeverityTextColor(advisory.severity)}`}>{advisory.description}</p>
+                          
+                          {advisory.severity === 'high' && (
+                            <div className="mt-4 flex items-center justify-end">
+                              <Button variant="outline" size="sm" asChild className="gap-2">
+                                <Link to="/energy">
+                                  <LinkIcon className="h-3 w-3" />
+                                  <span>More Information</span>
+                                </Link>
+                              </Button>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))
+                ) : (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <Zap className="h-12 w-12 text-yellow-300 mb-4" />
+                        <h3 className="text-lg font-medium">No energy advisories</h3>
+                        <p className="text-muted-foreground mt-1 max-w-md">
+                          There are currently no active energy advisories for your area.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Energy Saving Tips</CardTitle>
+                  <CardDescription>Ways to reduce electricity consumption</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
+                        <span className="font-medium text-yellow-600">1</span>
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Optimal AC temperature</h4>
+                        <p className="text-sm text-muted-foreground">Set your AC to 24-26°C for optimal energy efficiency without sacrificing comfort.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
+                        <span className="font-medium text-yellow-600">2</span>
+                      </div>
+                      <div>
+                        <h4 className="font-medium">LED lighting</h4>
+                        <p className="text-sm text-muted-foreground">Replace incandescent bulbs with LED lights to save up to 80% on lighting costs.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
+                        <span className="font-medium text-yellow-600">3</span>
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Unplug devices</h4>
+                        <p className="text-sm text-muted-foreground">Unplug electronics and appliances when not in use to eliminate standby power consumption.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
+                        <span className="font-medium text-yellow-600">4</span>
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Peak hour usage</h4>
+                        <p className="text-sm text-muted-foreground">Avoid running high-power appliances during peak hours (6-10 PM).</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </motion.div>

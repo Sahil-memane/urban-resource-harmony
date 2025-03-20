@@ -42,16 +42,20 @@ serve(async (req) => {
       - "Burst water main on Alandi Road near Shivar Chowk. Water flooding the street and causing traffic disruption."
       - "No water supply in entire G Block, Pimpri for the last 24 hours. Multiple residents affected including elderly and infants."
       - "Contaminated water with strong smell coming from taps in Sector 25, Nigdi. Water appears brownish and has foul odor."
+      - "Water leakage flooding basement parking of our building, risk of electrical short circuit."
+      - "Sewage mixing with drinking water in our society, people falling sick."
       
       MEDIUM PRIORITY EXAMPLES:
       - "Low water pressure in D Wing, Krushna Housing Society for the past 2 days. Only getting water on ground floor."
       - "Intermittent water supply in Sector 18, PCNTDA. Water comes only for 30 minutes instead of scheduled 2 hours."
       - "Water meter showing incorrect readings at 45/2 Pimpri Housing Society. Bill amount almost doubled from previous month."
+      - "Water connection was supposed to be installed last week but work not completed yet."
       
       LOW PRIORITY EXAMPLES:
       - "Need information on water supply schedule during the upcoming Ganesh festival."
       - "Water bill payment website not working properly. Unable to make online payment."
       - "Request for water quality report for Chinchwad area. Is the hardness level within acceptable limits?"
+      - "Looking for information about how to apply for new water connection."
       `;
     } else if (category === "energy") {
       categorySpecificExamples = `
@@ -59,23 +63,27 @@ serve(async (req) => {
       - "Live wire fallen on road in Akurdi near Dmart. Extremely dangerous situation."
       - "Transformer sparking and smoking in Morwadi, Pimpri. Risk of fire to nearby buildings."
       - "Complete power outage in Sector 27, Nigdi for over 12 hours. Multiple residential societies affected."
+      - "Electric pole leaning dangerously after last night's storm, may fall any time."
+      - "Frequent power surges damaging appliances and risk of fire in our building."
       
       MEDIUM PRIORITY EXAMPLES:
       - "Frequent power fluctuations damaging appliances in our building in Chinchwad East."
       - "Street lights not working on the entire stretch of Aundh Road, causing safety concerns at night."
       - "Power outage in specific wing of our society while other wings have electricity."
+      - "Electricity meter appears to be running fast, showing excess consumption."
       
       LOW PRIORITY EXAMPLES:
       - "Need information about solar panel installation procedure and subsidies offered by PCMC."
       - "Want to understand peak hour electricity rates for small businesses."
       - "Request for information on upcoming maintenance schedule in Bhosari area."
+      - "Question about electricity bill calculation methodology."
       `;
     }
 
     // Create a more comprehensive and detailed prompt for the AI
     const prompt = `
     You are an AI assistant for the PCMC (Pimpri Chinchwad Municipal Corporation) Smart City initiative.
-    Analyze the following ${category} complaint and determine its priority level based on severity, impact, and urgency.
+    Your task is to analyze the following ${category} complaint and determine its priority level based on severity, impact, and urgency.
     
     PRIORITY LEVELS EXPLAINED:
     - HIGH: Issues posing immediate risk to public safety, health, or critical infrastructure. Requires immediate attention (0-24 hours).
@@ -93,12 +101,16 @@ serve(async (req) => {
     ${attachmentUrl ? `ATTACHMENT INCLUDED: Yes` : ''}
     COMPLAINT ABOUT ${category.toUpperCase()} SERVICES: ${complaintText}
     
+    Emergency keywords to look for: urgent, immediate, dangerous, hazard, risk, emergency, life-threatening, fire, flood, leakage, burst, contamination, sick, health, live wire, sparking, outage, no supply.
+    
     Consider the following in your analysis:
     1. Is there an immediate health or safety risk?
     2. How many people are affected?
     3. Is essential service completely disrupted or just diminished?
     4. Is there property damage or environmental harm?
     5. Are vulnerable populations (elderly, children, hospitals) affected?
+    6. Does the complaint contain any emergency keywords?
+    7. Is the complaint about a complete service outage or just partial disruption?
     
     Respond with ONLY one of the following: "high", "medium", or "low"
     `;
@@ -165,7 +177,10 @@ serve(async (req) => {
           }
         }
         
-        if (highPriorityMatches >= 3) {
+        if (highPriorityMatches >= 3 || 
+            textToAnalyze.includes("urgent") || 
+            textToAnalyze.includes("emergency") || 
+            textToAnalyze.includes("dangerous")) {
           priority = "high";
         } else if (highPriorityMatches >= 1) {
           priority = "medium";
@@ -183,12 +198,18 @@ serve(async (req) => {
           textLower.includes("immediate") || 
           textLower.includes("dangerous") || 
           textLower.includes("health") || 
-          textLower.includes("safety")) {
+          textLower.includes("safety") ||
+          textLower.includes("no water") ||
+          textLower.includes("burst") ||
+          textLower.includes("leakage") ||
+          textLower.includes("flooding")) {
         priority = "high";
       } else if (textLower.includes("problem") || 
                 textLower.includes("issue") || 
                 textLower.includes("not working") || 
-                textLower.includes("broken")) {
+                textLower.includes("broken") ||
+                textLower.includes("interrupted") ||
+                textLower.includes("intermittent")) {
         priority = "medium";
       } else {
         priority = "low";

@@ -202,7 +202,7 @@ const Water = () => {
                   <LineChart data={waterData.waterConsumption}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="year" />
-                    <YAxis />
+                    <YAxis label={{ value: 'Volume (MLD)', angle: -90, position: 'insideLeft' }} />
                     <Tooltip />
                     <Legend />
                     <Line 
@@ -284,7 +284,8 @@ const Water = () => {
                 <LineChart data={waterData.waterQuality}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
-                  <YAxis />
+                  <YAxis yAxisId="left" label={{ value: 'pH & Turbidity', angle: -90, position: 'insideLeft' }} />
+                  <YAxis yAxisId="right" orientation="right" label={{ value: 'TDS (ppm)', angle: -90, position: 'insideRight' }} />
                   <Tooltip />
                   <Legend />
                   <Line 
@@ -292,12 +293,14 @@ const Water = () => {
                     dataKey="pH" 
                     stroke="#8884d8" 
                     name="pH Level" 
+                    yAxisId="left"
                   />
                   <Line 
                     type="monotone" 
                     dataKey="turbidity" 
                     stroke="#82ca9d" 
                     name="Turbidity (NTU)" 
+                    yAxisId="left"
                   />
                   <Line 
                     type="monotone" 
@@ -305,7 +308,6 @@ const Water = () => {
                     stroke="#ffc658" 
                     name="Total Dissolved Solids (ppm)" 
                     yAxisId="right"
-                    hide={true} // Hidden by default to keep chart readable
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -348,7 +350,7 @@ const Water = () => {
                 <AreaChart data={waterData.seasonalDemand}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
-                  <YAxis />
+                  <YAxis label={{ value: 'Volume (MLD)', angle: -90, position: 'insideLeft' }} />
                   <Tooltip />
                   <Legend />
                   <Area 
@@ -380,6 +382,111 @@ const Water = () => {
         </Card>
 
         {/* Additional cards for the Trends tab would go here */}
+      </div>
+    );
+  };
+
+  const renderPredictionsTab = () => {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Future Water Demand Predictions</CardTitle>
+            <CardDescription>Projected water requirements based on population growth and resource availability</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={[
+                    { year: '2024', demand: 800, supply: 780 },
+                    { year: '2025', demand: 830, supply: 800 },
+                    { year: '2026', demand: 870, supply: 820 },
+                    { year: '2027', demand: 910, supply: 850 },
+                    { year: '2028', demand: 950, supply: 870 }
+                  ]}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="year" />
+                  <YAxis label={{ value: 'Volume (MLD)', angle: -90, position: 'insideLeft' }} />
+                  <Tooltip />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="demand"
+                    stroke="#8884d8"
+                    name="Projected Demand (MLD)"
+                    strokeWidth={2}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="supply"
+                    stroke="#82ca9d"
+                    name="Projected Supply (MLD)"
+                    strokeWidth={2}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            
+            <div className="bg-muted p-4 rounded-md">
+              <h4 className="font-medium mb-2">Key Insights:</h4>
+              <ul className="space-y-2 text-sm">
+                <li className="flex gap-2">
+                  <span className="text-blue-600">•</span>
+                  <span>Water demand projected to increase by 3-5% annually based on population growth.</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-blue-600">•</span>
+                  <span>Current infrastructure capacity may reach limits by 2026 without expansion.</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-blue-600">•</span>
+                  <span>Conservation measures could reduce demand growth to 2% annually.</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-blue-600">•</span>
+                  <span>Summer months (March-June) show highest strain on water resources.</span>
+                </li>
+              </ul>
+            </div>
+            
+            {renderMeasurementNote("MLD")}
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Projected Service Improvements</CardTitle>
+            <CardDescription>Planned initiatives to enhance water availability and quality</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="border rounded-md p-4">
+                  <h4 className="font-medium flex items-center gap-2 mb-2">
+                    <Droplet className="h-4 w-4 text-blue-500" />
+                    New Pavana Pipeline Project
+                  </h4>
+                  <p className="text-sm text-muted-foreground">Expected to increase water supply capacity by 120 MLD by 2025.</p>
+                </div>
+                
+                <div className="border rounded-md p-4">
+                  <h4 className="font-medium flex items-center gap-2 mb-2">
+                    <RefreshCw className="h-4 w-4 text-green-500" />
+                    Water Recycling Plants
+                  </h4>
+                  <p className="text-sm text-muted-foreground">Three new treatment plants will add 50 MLD of recycled water for industrial use by 2026.</p>
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md">
+                <h4 className="font-medium mb-2 text-blue-700 dark:text-blue-400">Water Conservation Impact:</h4>
+                <p className="text-sm text-blue-700 dark:text-blue-400">Implementation of smart metering and leak detection systems is projected to reduce water wastage by 15% over the next 3 years.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   };
@@ -455,17 +562,7 @@ const Water = () => {
           </TabsContent>
           
           <TabsContent value="predictions">
-            <div className="grid grid-cols-1 gap-6">
-              <Card className="p-6">
-                <CardHeader>
-                  <CardTitle>Future Water Demand Predictions</CardTitle>
-                  <CardDescription>Projected water requirements based on population growth and resource availability</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p>Detailed prediction analytics are being developed based on PCMC infrastructure data.</p>
-                </CardContent>
-              </Card>
-            </div>
+            {renderPredictionsTab()}
           </TabsContent>
         </Tabs>
       </motion.div>
