@@ -156,7 +156,7 @@ serve(async (req) => {
           ],
         };
         
-        const textToAnalyze = complaintText.toLowerCase();
+        const textToAnalyze = complaintText?.toLowerCase() || '';
         let highPriorityMatches = 0;
         
         for (const keyword of emergencyKeywords[category] || []) {
@@ -177,7 +177,7 @@ serve(async (req) => {
       console.error("Error extracting priority from AI response:", error);
       
       // Even more robust fallback with basic text analysis
-      const textLower = complaintText.toLowerCase();
+      const textLower = complaintText?.toLowerCase() || '';
       if (textLower.includes("urgent") || 
           textLower.includes("emergency") || 
           textLower.includes("immediate") || 

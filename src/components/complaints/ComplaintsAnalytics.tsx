@@ -155,17 +155,10 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
       }
     });
     
-    const responseRates: { name: string, value: number }[] = [];
-    
-    // Convert to percentages
-    if (total > 0) {
-      timeCategories.forEach((name, index) => {
-        responseRates.push({
-          name,
-          value: Math.round((counts[index] / total) * 100)
-        });
-      });
-    }
+    const responseRates = timeCategories.map((name, index) => ({
+      name,
+      value: total > 0 ? Math.round((counts[index] / total) * 100) : 0
+    }));
     
     return responseRates;
   };
