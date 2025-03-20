@@ -11,7 +11,7 @@ import {
   Zap, 
   TrendingUp, 
   BarChart, 
-  PieChart, 
+  PieChart as PieChartIcon, 
   AlertTriangle,
   Download,
   Info,
@@ -33,7 +33,10 @@ import {
   AreaChart,
   Area,
   BarChart as RechartsBarChart,
-  Bar
+  Bar,
+  PieChart,
+  Pie,
+  Cell
 } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 

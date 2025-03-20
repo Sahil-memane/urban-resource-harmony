@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
@@ -35,16 +36,16 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
     try {
       // Mock complaints data for demonstration
       const mockComplaints = [
-        { id: '1', category: 'water', priority: 'medium', content: 'Low water pressure', source: 'text', status: 'pending', date: '2024-05-01T10:00:00.000Z', resolved_date: '2024-05-02T12:00:00.000Z' },
-        { id: '2', category: 'energy', priority: 'high', content: 'Power outage', source: 'voice', status: 'in-progress', date: '2024-05-03T14:00:00.000Z', resolved_date: '2024-05-04T16:00:00.000Z' },
-        { id: '3', category: 'water', priority: 'low', content: 'Leaky faucet', source: 'image', status: 'resolved', date: '2024-05-05T16:00:00.000Z', resolved_date: '2024-05-06T18:00:00.000Z' },
-        { id: '4', category: 'energy', priority: 'medium', content: 'Billing issue', source: 'text', status: 'pending', date: '2024-05-07T18:00:00.000Z', resolved_date: '2024-05-08T20:00:00.000Z' },
-        { id: '5', category: 'water', priority: 'high', content: 'Water contamination', source: 'voice', status: 'in-progress', date: '2024-05-09T20:00:00.000Z', resolved_date: '2024-05-10T22:00:00.000Z' },
-        { id: '6', category: 'energy', priority: 'low', content: 'Streetlight not working', source: 'image', status: 'resolved', date: '2024-05-11T22:00:00.000Z', resolved_date: '2024-05-12T00:00:00.000Z' },
-        { id: '7', category: 'water', priority: 'medium', content: 'Low water pressure', source: 'text', status: 'pending', date: '2024-05-13T00:00:00.000Z', resolved_date: '2024-05-14T02:00:00.000Z' },
-        { id: '8', category: 'energy', priority: 'high', content: 'Power outage', source: 'voice', status: 'in-progress', date: '2024-05-15T02:00:00.000Z', resolved_date: '2024-05-16T04:00:00.000Z' },
-        { id: '9', category: 'water', priority: 'low', content: 'Leaky faucet', source: 'image', status: 'resolved', date: '2024-05-17T04:00:00.000Z', resolved_date: '2024-05-18T06:00:00.000Z' },
-        { id: '10', category: 'energy', priority: 'medium', content: 'Billing issue', source: 'text', status: 'pending', date: '2024-05-19T06:00:00.000Z', resolved_date: '2024-05-20T08:00:00.000Z' },
+        { id: '1', category: 'water', priority: 'medium', content: 'Low water pressure', source: 'text', status: 'pending', date: '2024-05-01T10:00:00.000Z', resolved_date: '2024-05-01T15:30:00.000Z' },
+        { id: '2', category: 'energy', priority: 'high', content: 'Power outage', source: 'voice', status: 'in-progress', date: '2024-05-03T14:00:00.000Z', resolved_date: '2024-05-03T21:00:00.000Z' },
+        { id: '3', category: 'water', priority: 'low', content: 'Leaky faucet', source: 'image', status: 'resolved', date: '2024-05-05T16:00:00.000Z', resolved_date: '2024-05-07T11:00:00.000Z' },
+        { id: '4', category: 'energy', priority: 'medium', content: 'Billing issue', source: 'text', status: 'pending', date: '2024-05-07T18:00:00.000Z', resolved_date: '2024-05-08T11:00:00.000Z' },
+        { id: '5', category: 'water', priority: 'high', content: 'Water contamination', source: 'voice', status: 'in-progress', date: '2024-05-09T20:00:00.000Z', resolved_date: '2024-05-10T08:00:00.000Z' },
+        { id: '6', category: 'energy', priority: 'low', content: 'Streetlight not working', source: 'image', status: 'resolved', date: '2024-05-11T22:00:00.000Z', resolved_date: '2024-05-16T10:00:00.000Z' },
+        { id: '7', category: 'water', priority: 'medium', content: 'Low water pressure', source: 'text', status: 'pending', date: '2024-05-13T00:00:00.000Z', resolved_date: '2024-05-13T10:00:00.000Z' },
+        { id: '8', category: 'energy', priority: 'high', content: 'Power outage', source: 'voice', status: 'in-progress', date: '2024-05-15T02:00:00.000Z', resolved_date: '2024-05-15T07:00:00.000Z' },
+        { id: '9', category: 'water', priority: 'low', content: 'Leaky faucet', source: 'image', status: 'resolved', date: '2024-05-17T04:00:00.000Z', resolved_date: '2024-05-22T16:00:00.000Z' },
+        { id: '10', category: 'energy', priority: 'medium', content: 'Billing issue', source: 'text', status: 'pending', date: '2024-05-19T06:00:00.000Z', resolved_date: '2024-05-19T14:00:00.000Z' },
       ];
       setComplaints(mockComplaints);
     } catch (error) {
@@ -125,7 +126,7 @@ const ComplaintsAnalytics: React.FC<AnalyticsProps> = ({ viewType = 'overview' }
     }));
   };
 
-  // Update the getResponseRateAnalytics function to include more detailed time categories
+  // Updated function with more granular time categories
   const getResponseRateAnalytics = () => {
     // Calculate % of complaints responded within different time frames with more granularity
     const timeCategories = ["< 6 hours", "< 12 hours", "12-24 hours", "24-48 hours", "> 48 hours"];

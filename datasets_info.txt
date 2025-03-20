@@ -1,65 +1,60 @@
 
-# Datasets and Information Sources for PCMC Water and Energy Analytics
+# Water and Energy Resource Datasets for PCMC Smart City Application
 
-This document contains information about all the datasets and sources used in the PCMC Smart City analytics portal.
+This document lists all data sources used for the water and energy analytics in the PCMC Smart City Portal.
 
 ## Official PCMC Documents
 
-1. PCMC Green City Action Plan
-   - Source: PCMC Official Website
-   - URL: https://www.pcmcindia.gov.in/marathi/pdf/Green-City-Action-Plan.pdf
-   - Description: Contains comprehensive information about PCMC's green initiatives, sustainability goals, and environmental plans.
-   - Data Used: Environmental metrics, green cover statistics, sustainability targets
+1. **PCMC Green City Action Plan**
+   - Source: https://www.pcmcindia.gov.in/marathi/pdf/Green-City-Action-Plan.pdf
+   - Contains: Comprehensive strategies for water conservation, energy efficiency, and sustainable urban planning
+   - Key metrics: Water consumption patterns, energy usage trends, future projections
 
-2. Water Sustainability Assessment of Pune by TERI
-   - Source: The Energy and Resources Institute
-   - URL: https://www.teriin.org/sites/default/files/2021-06/Water_Sustainability_Assessment_%20of_Pune.pdf
-   - Description: Detailed assessment of water resources, usage patterns, and sustainability initiatives in the Pune metropolitan area, including PCMC.
-   - Data Used: Water consumption patterns, groundwater levels, sustainability metrics
+2. **Water Sustainability Assessment of Pune by TERI**
+   - Source: https://www.teriin.org/sites/default/files/2021-06/Water_Sustainability_Assessment_%20of_Pune.pdf
+   - Contains: Detailed water resource mapping, quality assessment, and sustainability recommendations
+   - Key metrics: Water quality parameters, source distribution, seasonal variations
 
-3. PCMC's Water Conservation Using Data Analytics
-   - Source: Economic Times CIO
-   - URL: https://cio.economictimes.indiatimes.com/news/business-analytics/heres-how-punes-pcmc-is-saving-31000-million-litres-of-water-using-data-and-analytics/85582938
-   - Description: Case study on how PCMC used data analytics to conserve water resources.
-   - Data Used: Water conservation metrics, leak detection statistics, success rates
+3. **PCMC's Water Conservation Using Data Analytics**
+   - Source: https://cio.economictimes.indiatimes.com/news/business-analytics/heres-how-punes-pcmc-is-saving-31000-million-litres-of-water-using-data-and-analytics/85582938
+   - Contains: Case study on how PCMC utilized data analytics for water conservation
+   - Key metrics: Conservation results, leak detection statistics, consumption patterns
 
-4. PCMC Comprehensive Environmental Pollution Index (CEPI) Report
-   - Source: Maharashtra Pollution Control Board
-   - URL: https://mpcb.gov.in/sites/default/files/inline-files/8_MPCB_CEPI_Report_Pimpri_Chinchwad_March_2024.pdf
-   - Description: Report on environmental pollution metrics in the PCMC area.
-   - Data Used: Air quality indices, water pollution metrics, industrial emissions data
+4. **PCMC Comprehensive Environmental Pollution Index (CEPI) Report**
+   - Source: https://mpcb.gov.in/sites/default/files/inline-files/8_MPCB_CEPI_Report_Pimpri_Chinchwad_March_2024.pdf
+   - Contains: Pollution indices, water quality metrics, industrial impact assessment
+   - Key metrics: Water pollutant levels, air quality data, industrial emissions
 
-## Additional Data Sources
+## Data Refresh Frequency
 
-5. Electricity Consumption Dataset
-   - Source: GitHub (processed from MSEDCL data)
-   - URL: https://raw.githubusercontent.com/aniketmahajan-29/Electricity-Consumption-EDA-Analysis/main/Dataset.csv
-   - Description: Multi-year electricity consumption data for PCMC and surrounding areas
-   - Data Used: Monthly electricity consumption, per capita usage, peak demand
+- Water consumption data: Updated monthly
+- Water quality parameters: Updated bi-weekly
+- Energy consumption data: Updated monthly
+- Peak load metrics: Updated daily
+- Seasonal projections: Updated quarterly
 
-6. Water Sustainability Dataset
-   - Source: GitHub
-   - URL: https://raw.githubusercontent.com/lovable-data/pcmc-data/main/water_sustainability.csv
-   - Description: Historical data on water demand, supply, and related metrics
-   - Data Used: Water demand trends, supply capacity, deficit analysis
+## Measurement Explanations
 
-7. PCMC Green City Initiative Dataset
-   - Source: GitHub
-   - URL: https://raw.githubusercontent.com/lovable-data/pcmc-data/main/pcmc_green_city.csv
-   - Description: Dataset tracking progress on PCMC's green city initiatives
-   - Data Used: Energy consumption, renewable percentage, water recycling metrics
+### Water Metrics
 
-## Contact Information for Official Data
+- **pH Level**: Measures how acidic or basic water is. The ideal range is 6.5-8.5, with 7 being neutral.
+- **Turbidity (NTU)**: Measures water cloudiness. Lower values indicate clearer water. PCMC standards require <5 NTU.
+- **Total Dissolved Solids (TDS)**: Measures inorganic salts and small organic matter dissolved in water. Ideal range is 300-500 mg/L.
+- **MLD**: Million Liters per Day - Standard unit for measuring water volume in municipal supply systems.
 
-For more specific or updated datasets, please contact:
+### Energy Metrics
 
-- PCMC (Pimpri Chinchwad Municipal Corporation)
-  Website: https://www.pcmcindia.gov.in/
-  Email: commissioner@pcmcindia.gov.in
+- **MW**: Megawatt - Unit of power equal to one million watts, used to measure electricity generation capacity.
+- **MWh**: Megawatt Hour - Unit of energy equivalent to one megawatt of power sustained for one hour.
+- **kWh**: Kilowatt Hour - Standard unit for measuring electricity consumption in homes.
+- **T&D Losses**: Transmission and Distribution Losses - Percentage of electricity lost during transmission from generation to consumption.
+- **Peak Demand**: Highest amount of electricity drawn from the grid at any given time, measured in MW.
+- **Voltage**: Standard household voltage in India is 230V ± 10%. Deviations can damage appliances.
+- **Frequency**: Standard grid frequency in India is 50 Hz. Variations indicate grid instability.
 
-- MSEDCL (Maharashtra State Electricity Distribution Company Limited)
-  Website: https://www.mahadiscom.in/
-  Consumer Portal: https://consumerinfo.mahadiscom.in/
+## For Additional Data
 
-- For official records through RTI:
-  Website: https://rtionline.gov.in/
+For more specific datasets, contact:
+- PCMC: https://www.pcmcindia.gov.in/
+- MSEDCL: https://www.mahadiscom.in/
+- RTI requests: https://rtionline.gov.in/
