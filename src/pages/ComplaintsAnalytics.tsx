@@ -83,7 +83,7 @@ const ComplaintsAnalyticsPage = () => {
       setAdvisories([...waterAdvisories]);
     } else if (userRole === 'energy-admin') {
       setAdvisories([...energyAdvisories]);
-    } else if (userRole === 'admin') {
+    } else if (userRole === 'super-admin') {
       setAdvisories([...waterAdvisories, ...energyAdvisories]);
     } else {
       // For citizens, show a mix of advisories most relevant to them
