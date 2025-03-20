@@ -1,123 +1,57 @@
 
 # Sample Water Complaints for PCMC Smart City Portal
 
-The following are sample water-related complaints that can be submitted to the PCMC Water Department. Feel free to copy and paste these into the complaint form as needed.
+## High Priority Water Complaints
 
-## Water Supply Issues
+1. "Burst water main on Alandi Road near Shivar Chowk. Water flooding the street and causing traffic disruption. URGENT!"
 
-1. **No Water Supply**
-   Category: Water
-   Priority: High
-   Description: There has been no water supply in our area for the past 2 days. This is causing severe hardship to all residents.
-   Location: Sector 23, Nigdi
-   Contact: 9876543210
+2. "No water supply in entire G Block, Pimpri for the last 24 hours. Multiple residents affected including elderly and infants. Need immediate resolution."
 
-2. **Low Water Pressure**
-   Category: Water
-   Priority: Medium
-   Description: The water pressure in our building has been extremely low for the past week. It's difficult to fill overhead tanks.
-   Location: Ravet, Near Ravet Bridge
-   Contact: 9876543211
+3. "Contaminated water with strong smell coming from taps in Sector 25, Nigdi. Water appears brownish and has foul odor. Health hazard."
 
-3. **Irregular Water Supply**
-   Category: Water
-   Priority: Medium
-   Description: The water supply to our area has become very irregular and unpredictable. Sometimes water comes at midnight, sometimes in the early morning.
-   Location: Pimple Saudagar, Near Kunal Icon
-   Contact: 9876543212
+4. "Major pipeline leak near Akurdi railway station causing significant water wastage. Water pressure dropping in surrounding areas."
 
-## Water Quality Issues
+5. "Sewage backing up into drinking water pipes in Chinchwad East. Water is discolored and unsafe for consumption. Multiple residents reporting illness."
 
-4. **Contaminated Water**
-   Category: Water
-   Priority: High
-   Description: The water supply in our area appears contaminated. It has a bad odor and is yellowish in color. Several residents have reported stomach issues.
-   Location: Wakad, Behind Datta Mandir
-   Contact: 9876543213
+## Medium Priority Water Complaints
 
-5. **Muddy Water**
-   Category: Water
-   Priority: Medium
-   Description: After recent pipeline maintenance, we are receiving muddy water that is not fit for consumption.
-   Location: Chinchwad, Near Chinchwad Station
-   Contact: 9876543214
+1. "Low water pressure in D Wing, Krushna Housing Society for the past 2 days. Only getting water on ground floor."
 
-6. **Chemical Smell in Water**
-   Category: Water
-   Priority: High
-   Description: The water supply has a strong chemical smell and has caused skin irritation when used for bathing.
-   Location: Bhosari MIDC Area
-   Contact: 9876543215
+2. "Intermittent water supply in Sector 18, PCNTDA. Water comes only for 30 minutes instead of scheduled 2 hours."
 
-## Infrastructure Issues
+3. "Water meter showing incorrect readings at 45/2 Pimpri Housing Society. Bill amount almost doubled from previous month."
 
-7. **Water Pipe Leakage**
-   Category: Water
-   Priority: Medium
-   Description: There is a significant water pipe leakage near our society main gate. Water is continuously flowing onto the road causing wastage.
-   Location: Akurdi, Near Railway Station
-   Contact: 9876543216
+4. "Water connection application pending for over 2 weeks despite completing all formalities. Reference ID: PCMC-W-23789."
 
-8. **Broken Water Valve**
-   Category: Water
-   Priority: Medium
-   Description: The main water valve on our street is broken, causing uncontrolled water flow and wastage.
-   Location: Sant Tukaram Nagar, Near Bus Stand
-   Contact: 9876543217
+5. "Construction causing damage to water pipeline near Aundh Road. Minor leakage observed but supply not yet affected."
 
-9. **Water Pipeline Burst**
-   Category: Water
-   Priority: High
-   Description: A main water pipeline has burst causing flooding on the road and disruption to water supply in the entire area.
-   Location: Nigdi Pradhikaran, Sector 24
-   Contact: 9876543218
+## Low Priority Water Complaints
 
-10. **Water Meter Issues**
-    Category: Water
-    Priority: Low
-    Description: The water meter at our residence appears to be malfunctioning. It's showing abnormally high readings despite normal usage.
-    Location: Pimpri, Near Pimpri Market
-    Contact: 9876543219
+1. "Need information on water supply schedule during the upcoming Ganesh festival."
 
-## Billing Issues
+2. "Water bill payment website not working properly. Unable to make online payment."
 
-11. **Incorrect Water Bill**
-    Category: Water
-    Priority: Low
-    Description: I have received an incorrect water bill with charges much higher than usual despite no increase in usage.
-    Location: Kalewadi, Phase 2
-    Contact: 9876543220
+3. "Request for water quality report for Chinchwad area. Is the hardness level within acceptable limits?"
 
-12. **Non-receipt of Water Bill**
-    Category: Water
-    Priority: Low
-    Description: I have not received my water bill for the past 3 months but service continues.
-    Location: Rahatani, Behind Police Station
-    Contact: 9876543221
+4. "Clarification needed on new water conservation guidelines published on PCMC website."
 
-## Tanker-related Issues
+5. "General feedback on improved water supply conditions in Bhosari Industrial Area after recent pipeline upgrade."
 
-13. **Water Tanker Not Arriving**
-    Category: Water
-    Priority: High
-    Description: Despite booking a water tanker 2 days ago due to water supply issues, no tanker has arrived.
-    Location: Thergaon, Near Pawana Hospital
-    Contact: 9876543222
+## Voice Complaint Transcripts
 
-14. **Overcharging by Water Tanker**
-    Category: Water
-    Priority: Medium
-    Description: The private water tanker operators in our area are charging excessive rates due to water shortage.
-    Location: Chikhali, Near Morewadi
-    Contact: 9876543223
+1. "This is Nilesh Patil from Akurdi. I want to report a major water leak near the Metro station. The road is getting damaged and a lot of water is being wasted. Please send someone urgently."
 
-## Rainwater Harvesting and Conservation
+2. "Hello, I'm calling from Rose Garden Society in Pimpale Saudagar. We've been getting muddy water since yesterday morning. It's not usable for drinking or cooking. We've tried filtering but it's still not clear. Please help."
 
-15. **Rainwater Harvesting Structure Damaged**
-    Category: Water
-    Priority: Low
-    Description: The rainwater harvesting structure in our society needs repair before monsoon season.
-    Location: Moshi, Near PCMC Octroi Naka
-    Contact: 9876543224
+## Common Water-Related Issues
 
-Remember to include photos or documents as evidence when submitting your complaint if available.
+- Water supply interruptions
+- Low water pressure
+- Contaminated water
+- Pipeline leaks and bursts
+- Incorrect water metering
+- Billing disputes
+- Water connection issues
+- Sewage mixing with water supply
+- Water logging during monsoon
+- Water conservation concerns

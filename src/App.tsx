@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,13 +18,11 @@ import ComplaintsAnalytics from "./pages/ComplaintsAnalytics";
 import AdminDashboard from "./pages/AdminDashboard";
 import Water from "./pages/Water";
 import Energy from "./pages/Energy";
-
-// Components
-import Chatbot from "./components/chatbot/Chatbot";
+import Advisory from "./pages/Advisory";
 
 const queryClient = new QueryClient();
 
-const App = () => {
+function App() {
   // Initialize storage bucket on app load
   useEffect(() => {
     initializeStorage();
@@ -48,7 +45,7 @@ const App = () => {
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/water" element={<Water />} />
               <Route path="/energy" element={<Energy />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="/advisory" element={<Advisory />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AnimatePresence>
@@ -56,6 +53,6 @@ const App = () => {
       </TooltipProvider>
     </QueryClientProvider>
   );
-};
+}
 
 export default App;

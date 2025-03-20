@@ -1,0 +1,57 @@
+
+# Sample Energy Complaints for PCMC Smart City Portal
+
+## High Priority Energy Complaints
+
+1. "Exposed live wire hanging from electric pole near Shivaji Chowk, Chinchwad. Dangerous situation especially with rain expected tonight. URGENT SAFETY HAZARD!"
+
+2. "Complete power outage on entire Morwadi Road affecting residential buildings and medical clinics. Patient care compromised at Lifeline Hospital."
+
+3. "Transformer sparking and smoking in Pimpri Market area. Risk of fire and explosion. Multiple businesses and residences at risk."
+
+4. "Electric pole damaged by vehicle accident on Aundh-Ravet Road causing wires to hang dangerously low across the street."
+
+5. "Underground cable fire near Akurdi station with smoke coming from manholes. Power flickering in surrounding buildings."
+
+## Medium Priority Energy Complaints
+
+1. "Frequent power fluctuations in Nigdi Sector 22 damaging electronic appliances. Voltage varying between 180-260V."
+
+2. "Scheduled 2-hour maintenance outage extended to 6+ hours in Sant Tukaram Nagar without notification."
+
+3. "Street lights not working on entire stretch of Kalewadi Main Road creating safety concerns after dark."
+
+4. "Receiving excessive electricity bills for the past 3 months. Meter reading appears incorrect compared to actual consumption."
+
+5. "Newly installed smart meter malfunctioning at Krishna Housing Complex, Building C. Showing error code E-04."
+
+## Low Priority Energy Complaints
+
+1. "Request for energy audit for my commercial shop in Pimpri Market to identify efficiency improvements."
+
+2. "Need information on solar panel subsidy program announced by PCMC last month."
+
+3. "MSEDCL online payment portal not accepting credit card payments since yesterday."
+
+4. "When will net metering for rooftop solar be implemented in Wakad area?"
+
+5. "Inquiry about load extension application status submitted two weeks ago. Reference: PCMC-E-45621."
+
+## Voice Complaint Transcripts
+
+1. "I'm calling from Sanghvi Heights in Pimple Gurav. We're experiencing voltage fluctuations since yesterday evening. My refrigerator and TV were damaged due to sudden power surge. This is happening frequently in our area."
+
+2. "Hello, this is Dr. Sharma from Healing Hands Clinic in Pradhikaran. We've had no electricity for over 4 hours now. We have vaccines that need refrigeration and patients waiting for treatment. This is urgent as we're a medical facility."
+
+## Common Energy-Related Issues
+
+- Power outages and load shedding
+- Voltage fluctuations
+- Faulty meters
+- Billing disputes
+- Street light failures
+- Electric pole and transformer issues
+- Damaged cables and wires
+- Connection and disconnection requests
+- Energy theft reporting
+- Renewable energy integration concerns

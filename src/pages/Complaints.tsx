@@ -232,7 +232,7 @@ const Complaints = () => {
       startRecording();
     }
   };
-
+  
   const getPriorityFromAI = async (text: string) => {
     try {
       setPredictionLoading(true);
@@ -243,8 +243,18 @@ const Complaints = () => {
         return 'medium';
       }
       
+      // Prepare a more robust payload with all available context
+      const payload = { 
+        complaintText: text, 
+        category,
+        source: activeTab,
+        attachmentUrl: audioUrl || (selectedFile ? URL.createObjectURL(selectedFile) : null)
+      };
+      
+      console.log('Sending to AI for priority detection:', payload);
+      
       const { data, error } = await supabase.functions.invoke('ai-priority', {
-        body: { complaintText: text, category }
+        body: payload
       });
       
       console.log('AI Priority response:', data, error);
@@ -257,7 +267,7 @@ const Complaints = () => {
       
       if (data && data.priority) {
         setPriority(data.priority);
-        toast.success(`AI has set priority to: ${data.priority}`);
+        toast.success(`AI analysis determined priority: ${data.priority}`);
         return data.priority;
       } else {
         // Fallback to medium if no priority is returned
