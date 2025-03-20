@@ -10,3 +10,7 @@ seaborn==0.12.2
 requests==2.31.0
 plotly==5.17.0
 statsmodels==0.14.0
+beautifulsoup4==4.12.2
+PyPDF2==3.0.1
+lxml==4.9.3
+tabula-py==2.8.2

@@ -4,8 +4,11 @@ import { motion } from 'framer-motion';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Droplet, AlertTriangle, TrendingUp, Lightbulb } from 'lucide-react';
+import { Droplet, AlertTriangle, TrendingUp, Lightbulb, RefreshCw, Download } from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   LineChart, 
   Line, 
@@ -21,7 +24,12 @@ import {
   CartesianGrid, 
   Tooltip, 
   Legend,
-  ResponsiveContainer 
+  ResponsiveContainer,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar
 } from 'recharts';
 
 const COLORS = {
@@ -34,83 +42,92 @@ const COLORS = {
   danger: '#EF4444',    // red
 };
 
-const waterConsumptionData = [
-  { year: '2018', domestic: 410, industrial: 240, total: 650 },
-  { year: '2019', domestic: 425, industrial: 245, total: 670 },
-  { year: '2020', domestic: 400, industrial: 230, total: 630 },
-  { year: '2021', domestic: 440, industrial: 260, total: 700 },
-  { year: '2022', domestic: 460, industrial: 280, total: 740 },
-  { year: '2023', domestic: 480, industrial: 290, total: 770 },
-];
-
-const waterSourceData = [
-  { name: 'Pavana Dam', value: 55 },
-  { name: 'Groundwater', value: 20 },
-  { name: 'Indrayani River', value: 15 },
-  { name: 'Other Sources', value: 10 },
-];
-
-const seasonalWaterDemand = [
-  { name: 'Winter', demand: 90, supply: 110, critical: 80 },
-  { name: 'Spring', demand: 95, supply: 110, critical: 80 },
-  { name: 'Summer', demand: 120, supply: 110, critical: 80 },
-  { name: 'Monsoon', demand: 85, supply: 110, critical: 80 },
-  { name: 'Autumn', demand: 90, supply: 110, critical: 80 },
-];
-
-const waterQualityData = [
-  { month: 'Jan', pH: 7.2, turbidity: 3.2, tds: 380 },
-  { month: 'Feb', pH: 7.3, turbidity: 3.0, tds: 375 },
-  { month: 'Mar', pH: 7.1, turbidity: 3.5, tds: 390 },
-  { month: 'Apr', pH: 7.0, turbidity: 4.0, tds: 400 },
-  { month: 'May', pH: 6.9, turbidity: 4.2, tds: 420 },
-  { month: 'Jun', pH: 7.0, turbidity: 3.8, tds: 410 },
-  { month: 'Jul', pH: 7.2, turbidity: 3.5, tds: 390 },
-  { month: 'Aug', pH: 7.4, turbidity: 3.0, tds: 370 },
-  { month: 'Sep', pH: 7.3, turbidity: 2.8, tds: 360 },
-  { month: 'Oct', pH: 7.3, turbidity: 2.9, tds: 365 },
-  { month: 'Nov', pH: 7.2, turbidity: 3.0, tds: 370 },
-  { month: 'Dec', pH: 7.2, turbidity: 3.1, tds: 375 },
-];
-
-const citizenWaterAlerts = [
-  {
-    month: 'April-May',
-    level: 'high',
-    alert: 'Water Supply Reduction',
-    conservation: 'Store water in clean containers during morning supply. Report leakages promptly.',
-  },
-  {
-    month: 'June-September',
-    level: 'low',
-    alert: 'Normal Supply',
-    conservation: 'Practice regular water conservation. Use wastewater from RO systems for plants.',
-  },
-  {
-    month: 'October-November',
-    level: 'medium',
-    alert: 'Occasional Disruption',
-    conservation: 'Expect occasional supply disruptions due to maintenance. Store water as needed.',
-  },
-  {
-    month: 'December-March',
-    level: 'low',
-    alert: 'Normal Supply',
-    conservation: 'Continue regular conservation practices. Fix any leaking taps or pipes.',
-  },
-];
-
-const waterProjections = [
-  { year: '2024', projected: 795, sustainable: 780 },
-  { year: '2025', projected: 815, sustainable: 790 },
-  { year: '2026', projected: 840, sustainable: 805 },
-  { year: '2027', projected: 870, sustainable: 820 },
-  { year: '2028', projected: 890, sustainable: 840 },
-];
-
 const WaterPage = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const { userRole } = useUserRole();
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<any>({
+    waterConsumption: [],
+    waterSources: [],
+    seasonalWaterDemand: [],
+    waterQuality: [],
+    waterAlerts: [],
+    waterProjections: [],
+    waterEfficiency: [],
+    waterRisks: []
+  });
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  useEffect(() => {
+    fetchWaterData();
+  }, []);
+
+  const fetchWaterData = async (forceRefresh = false) => {
+    setLoading(true);
+    try {
+      console.log("Fetching water data...");
+      const { data: result, error } = await supabase.functions.invoke('python-bridge', {
+        body: { 
+          endpoint: 'fetch_resource_data',
+          data: { 
+            resourceType: 'water',
+            forceRefresh
+          }
+        }
+      });
+      
+      if (error) {
+        console.error("Error fetching water data:", error);
+        toast.error("Failed to load water resource data");
+        setLoading(false);
+        return;
+      }
+      
+      if (result.success && result.data) {
+        console.log("Water data fetched successfully:", result.data);
+        setData(result.data);
+        setLastUpdated(new Date());
+        setLoading(false);
+      } else {
+        console.error("Failed to fetch water data:", result);
+        toast.error("Failed to load water resource data");
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error("Exception fetching water data:", err);
+      toast.error("Failed to load water resource data");
+      setLoading(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    toast.info("Refreshing water data...");
+    fetchWaterData(true);
+  };
+
+  const downloadData = () => {
+    try {
+      // Create a JSON blob and download it
+      const jsonData = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'pcmc_water_data.json';
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success("Water data downloaded successfully");
+    } catch (err) {
+      console.error("Error downloading data:", err);
+      toast.error("Failed to download water data");
+    }
+  };
 
   return (
     <MainLayout>
@@ -121,16 +138,34 @@ const WaterPage = () => {
         transition={{ duration: 0.3 }}
         className="container mx-auto py-8 px-4 md:px-6"
       >
-        <div className="flex items-center gap-2 mb-2">
-          <Droplet className="h-6 w-6 text-blue-600" />
-          <h1 className="text-3xl font-bold">Water Resources</h1>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            <Droplet className="h-6 w-6 text-blue-600" />
+            <h1 className="text-3xl font-bold">Water Resources</h1>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {lastUpdated && (
+              <span className="text-sm text-gray-500">
+                Last updated: {lastUpdated.toLocaleTimeString()}
+              </span>
+            )}
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Refresh
+            </Button>
+            <Button variant="outline" size="sm" onClick={downloadData}>
+              <Download className="h-4 w-4 mr-1" />
+              Download
+            </Button>
+          </div>
         </div>
         
         <p className="text-gray-600 dark:text-gray-400 mb-6">
           Comprehensive information about PCMC water resources, consumption patterns, and conservation advice.
         </p>
         
-        {userRole === 'citizen' && (
+        {userRole === 'citizen' && data.waterAlerts && data.waterAlerts.length > 0 && (
           <Card className="mb-6 border-blue-200 bg-blue-50 dark:bg-blue-950/20">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
@@ -139,10 +174,11 @@ const WaterPage = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-blue-800 dark:text-blue-400">
-                Based on seasonal patterns, water supply pressure may be reduced during April-May. 
-                Consider storing water and reporting any leakages promptly.
-              </p>
+              {data.waterAlerts.map((alert: any, index: number) => (
+                <div key={index} className={`text-sm text-blue-800 dark:text-blue-400 ${index > 0 ? 'mt-2' : ''}`}>
+                  <span className="font-semibold">{alert.month}:</span> {alert.conservation}
+                </div>
+              ))}
             </CardContent>
           </Card>
         )}
@@ -174,7 +210,7 @@ const WaterPage = () => {
                   <CardContent>
                     <div className="h-[300px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={waterConsumptionData}>
+                        <BarChart data={data.waterConsumption || []}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="year" />
                           <YAxis />
@@ -198,7 +234,7 @@ const WaterPage = () => {
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
-                            data={waterSourceData}
+                            data={data.waterSources || []}
                             cx="50%"
                             cy="50%"
                             labelLine={true}
@@ -207,7 +243,7 @@ const WaterPage = () => {
                             dataKey="value"
                             label={({name, value}) => `${name}: ${value}%`}
                           >
-                            {waterSourceData.map((entry, index) => (
+                            {(data.waterSources || []).map((entry: any, index: number) => (
                               <Cell key={`cell-${index}`} fill={`hsl(${index * 45 + 200}, 70%, 50%)`} />
                             ))}
                           </Pie>
@@ -227,7 +263,7 @@ const WaterPage = () => {
                 <CardContent>
                   <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={seasonalWaterDemand}>
+                      <LineChart data={data.seasonalWaterDemand || []}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="name" />
                         <YAxis />
@@ -258,7 +294,7 @@ const WaterPage = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {citizenWaterAlerts.map((item, index) => (
+                        {(data.waterAlerts || []).map((item: any, index: number) => (
                           <tr key={index} className={index % 2 === 0 ? 'bg-muted/50' : ''}>
                             <td className="p-2">{item.month}</td>
                             <td className="p-2">
@@ -295,7 +331,7 @@ const WaterPage = () => {
                 <CardContent>
                   <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={waterQualityData}>
+                      <LineChart data={data.waterQuality || []}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="month" />
                         <YAxis />
@@ -317,7 +353,7 @@ const WaterPage = () => {
                 <CardContent>
                   <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={waterQualityData}>
+                      <AreaChart data={data.waterQuality || []}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="month" />
                         <YAxis />
@@ -333,18 +369,40 @@ const WaterPage = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>Historical Water Consumption</CardTitle>
-                  <CardDescription>PCMC water consumption trends (2018-2023)</CardDescription>
+                  <CardDescription>PCMC water consumption trends</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={waterConsumptionData}>
+                      <LineChart data={data.waterConsumption || []}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="year" />
                         <YAxis />
                         <Tooltip />
                         <Legend />
                         <Line type="monotone" dataKey="total" stroke={COLORS.accent} strokeWidth={2} name="Total (MLD)" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Water System Efficiency Metrics</CardTitle>
+                  <CardDescription>System improvements over time</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={data.waterEfficiency || []}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="year" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="leakage" stroke={COLORS.danger} name="Distribution Losses (%)" />
+                        <Line type="monotone" dataKey="treatment" stroke={COLORS.success} name="Treatment Efficiency (%)" />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -363,7 +421,7 @@ const WaterPage = () => {
                 <CardContent>
                   <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={waterProjections}>
+                      <LineChart data={data.waterProjections || []}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="year" />
                         <YAxis />
@@ -401,6 +459,29 @@ const WaterPage = () => {
                         <Legend />
                         <Bar dataKey="saving" fill={COLORS.success} name="Potential Savings (MLD)" />
                       </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Water Supply Risk Assessment</CardTitle>
+                  <CardDescription>Area-wise risk analysis in PCMC</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart data={data.waterRisks || []}>
+                        <PolarGrid />
+                        <PolarAngleAxis dataKey="area" />
+                        <PolarRadiusAxis angle={90} domain={[0, 100]} />
+                        <Radar name="Shortage Risk" dataKey="shortageRisk" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+                        <Radar name="Infrastructure Risk" dataKey="infrastructureRisk" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.6} />
+                        <Radar name="Quality Risk" dataKey="qualityRisk" stroke="#ffc658" fill="#ffc658" fillOpacity={0.6} />
+                        <Legend />
+                        <Tooltip />
+                      </RadarChart>
                     </ResponsiveContainer>
                   </div>
                 </CardContent>

@@ -1,0 +1,137 @@
+
+# Sample Electricity Complaints for PCMC Smart City Portal
+
+The following are sample electricity-related complaints that can be submitted to the PCMC Energy Department. Feel free to copy and paste these into the complaint form as needed.
+
+## Power Supply Issues
+
+1. **Power Outage**
+   Category: Energy
+   Priority: High
+   Description: Complete power outage in our entire neighborhood for over 8 hours. No communication from authorities about expected restoration time.
+   Location: Nigdi, Sector 26
+   Contact: 9876543230
+
+2. **Frequent Power Cuts**
+   Category: Energy
+   Priority: Medium
+   Description: We've been experiencing frequent power cuts (5-6 times daily) for the past week, each lasting 20-30 minutes.
+   Location: Ravet, Woodsville Society
+   Contact: 9876543231
+
+3. **Voltage Fluctuation**
+   Category: Energy
+   Priority: Medium
+   Description: Severe voltage fluctuations in our area causing damage to electronic appliances. My refrigerator was damaged yesterday.
+   Location: Pimple Nilakh, Near D-Mart
+   Contact: 9876543232
+
+4. **Low Voltage Supply**
+   Category: Energy
+   Priority: Medium
+   Description: We are receiving very low voltage (below 180V) which is insufficient to run air conditioners and water pumps.
+   Location: Wakad, Elegant Residency
+   Contact: 9876543233
+
+## Infrastructure Issues
+
+5. **Transformer Sparking**
+   Category: Energy
+   Priority: High
+   Description: The electrical transformer near our building is sparking continuously and poses a serious safety hazard.
+   Location: Chinchwad East, Near Chaphekar Chowk
+   Contact: 9876543234
+
+6. **Broken Electric Pole**
+   Category: Energy
+   Priority: High
+   Description: An electric pole has been damaged after yesterday's heavy winds and is leaning dangerously.
+   Location: Bhosari, Near MIDC Police Station
+   Contact: 9876543235
+
+7. **Hanging Electric Wires**
+   Category: Energy
+   Priority: High
+   Description: Electric wires are hanging very low near the children's playground, creating a dangerous situation.
+   Location: Dighi, Near Chhatrapati Shivaji Garden
+   Contact: 9876543236
+
+8. **Damaged Distribution Box**
+   Category: Energy
+   Priority: Medium
+   Description: The electrical distribution box on our street is open with exposed wires, creating a risk of electrocution.
+   Location: Sangvi, Near Ganesh Temple
+   Contact: 9876543237
+
+## Billing Issues
+
+9. **Excessive Electricity Bill**
+   Category: Energy
+   Priority: Medium
+   Description: Our electricity bill for this month is abnormally high (3x normal) despite no change in consumption pattern.
+   Location: Pimpri, Near Pimpri Camp
+   Contact: 9876543238
+
+10. **Incorrect Meter Reading**
+    Category: Energy
+    Priority: Low
+    Description: The meter reading shown on our bill does not match the actual reading on our meter.
+    Location: Akurdi, Near Railway Colony
+    Contact: 9876543239
+
+11. **Bill Received Despite Prepaid Meter**
+    Category: Energy
+    Priority: Low
+    Description: We have a prepaid meter installed but still received a monthly bill which should not happen.
+    Location: Nigdi Pradhikaran, Sector 22
+    Contact: 9876543240
+
+## Street Light Issues
+
+12. **Street Lights Not Working**
+    Category: Energy
+    Priority: Medium
+    Description: All street lights on our road have not been working for the past 5 days, creating safety concerns at night.
+    Location: Thergaon, Near Post Office
+    Contact: 9876543241
+
+13. **Street Lights On During Daytime**
+    Category: Energy
+    Priority: Low
+    Description: The street lights in our area remain on throughout the day, resulting in waste of electricity.
+    Location: Chikhali, Near Gurudwara
+    Contact: 9876543242
+
+14. **Dim Street Lights**
+    Category: Energy
+    Priority: Low
+    Description: The street lights on the main road are very dim and do not provide adequate illumination at night.
+    Location: Moshi, Near Highway
+    Contact: 9876543243
+
+## Metering Issues
+
+15. **Smart Meter Malfunction**
+    Category: Energy
+    Priority: Medium
+    Description: Our recently installed smart meter is frequently showing error codes and resetting.
+    Location: Rahatani, Palm Springs Society
+    Contact: 9876543244
+
+16. **Meter Box Damage**
+    Category: Energy
+    Priority: Medium
+    Description: The meter box outside our building is damaged and the meter is exposed to rain and direct sunlight.
+    Location: Kalewadi, Near Tapkir Chowk
+    Contact: 9876543245
+
+## Renewable Energy Issues
+
+17. **Solar Panel Connection Issue**
+    Category: Energy
+    Priority: Low
+    Description: After installing solar panels, the net metering connection promised by MSEDCL has not been provided.
+    Location: Wakad, Blue Ridge Society
+    Contact: 9876543246
+
+Remember to include photos or documents as evidence when submitting your complaint if available.

@@ -1,0 +1,123 @@
+
+# Sample Water Complaints for PCMC Smart City Portal
+
+The following are sample water-related complaints that can be submitted to the PCMC Water Department. Feel free to copy and paste these into the complaint form as needed.
+
+## Water Supply Issues
+
+1. **No Water Supply**
+   Category: Water
+   Priority: High
+   Description: There has been no water supply in our area for the past 2 days. This is causing severe hardship to all residents.
+   Location: Sector 23, Nigdi
+   Contact: 9876543210
+
+2. **Low Water Pressure**
+   Category: Water
+   Priority: Medium
+   Description: The water pressure in our building has been extremely low for the past week. It's difficult to fill overhead tanks.
+   Location: Ravet, Near Ravet Bridge
+   Contact: 9876543211
+
+3. **Irregular Water Supply**
+   Category: Water
+   Priority: Medium
+   Description: The water supply to our area has become very irregular and unpredictable. Sometimes water comes at midnight, sometimes in the early morning.
+   Location: Pimple Saudagar, Near Kunal Icon
+   Contact: 9876543212
+
+## Water Quality Issues
+
+4. **Contaminated Water**
+   Category: Water
+   Priority: High
+   Description: The water supply in our area appears contaminated. It has a bad odor and is yellowish in color. Several residents have reported stomach issues.
+   Location: Wakad, Behind Datta Mandir
+   Contact: 9876543213
+
+5. **Muddy Water**
+   Category: Water
+   Priority: Medium
+   Description: After recent pipeline maintenance, we are receiving muddy water that is not fit for consumption.
+   Location: Chinchwad, Near Chinchwad Station
+   Contact: 9876543214
+
+6. **Chemical Smell in Water**
+   Category: Water
+   Priority: High
+   Description: The water supply has a strong chemical smell and has caused skin irritation when used for bathing.
+   Location: Bhosari MIDC Area
+   Contact: 9876543215
+
+## Infrastructure Issues
+
+7. **Water Pipe Leakage**
+   Category: Water
+   Priority: Medium
+   Description: There is a significant water pipe leakage near our society main gate. Water is continuously flowing onto the road causing wastage.
+   Location: Akurdi, Near Railway Station
+   Contact: 9876543216
+
+8. **Broken Water Valve**
+   Category: Water
+   Priority: Medium
+   Description: The main water valve on our street is broken, causing uncontrolled water flow and wastage.
+   Location: Sant Tukaram Nagar, Near Bus Stand
+   Contact: 9876543217
+
+9. **Water Pipeline Burst**
+   Category: Water
+   Priority: High
+   Description: A main water pipeline has burst causing flooding on the road and disruption to water supply in the entire area.
+   Location: Nigdi Pradhikaran, Sector 24
+   Contact: 9876543218
+
+10. **Water Meter Issues**
+    Category: Water
+    Priority: Low
+    Description: The water meter at our residence appears to be malfunctioning. It's showing abnormally high readings despite normal usage.
+    Location: Pimpri, Near Pimpri Market
+    Contact: 9876543219
+
+## Billing Issues
+
+11. **Incorrect Water Bill**
+    Category: Water
+    Priority: Low
+    Description: I have received an incorrect water bill with charges much higher than usual despite no increase in usage.
+    Location: Kalewadi, Phase 2
+    Contact: 9876543220
+
+12. **Non-receipt of Water Bill**
+    Category: Water
+    Priority: Low
+    Description: I have not received my water bill for the past 3 months but service continues.
+    Location: Rahatani, Behind Police Station
+    Contact: 9876543221
+
+## Tanker-related Issues
+
+13. **Water Tanker Not Arriving**
+    Category: Water
+    Priority: High
+    Description: Despite booking a water tanker 2 days ago due to water supply issues, no tanker has arrived.
+    Location: Thergaon, Near Pawana Hospital
+    Contact: 9876543222
+
+14. **Overcharging by Water Tanker**
+    Category: Water
+    Priority: Medium
+    Description: The private water tanker operators in our area are charging excessive rates due to water shortage.
+    Location: Chikhali, Near Morewadi
+    Contact: 9876543223
+
+## Rainwater Harvesting and Conservation
+
+15. **Rainwater Harvesting Structure Damaged**
+    Category: Water
+    Priority: Low
+    Description: The rainwater harvesting structure in our society needs repair before monsoon season.
+    Location: Moshi, Near PCMC Octroi Naka
+    Contact: 9876543224
+
+Remember to include photos or documents as evidence when submitting your complaint if available.
