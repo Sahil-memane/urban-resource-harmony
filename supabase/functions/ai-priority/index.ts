@@ -20,16 +20,16 @@ serve(async (req) => {
 
     let { complaintText, category, attachmentUrl, source, attachmentContent } = await req.json();
 
-    console.log(`Processing ${category} complaint for priority determination`);
-    console.log(`Content: ${complaintText?.substring(0, 100)}${complaintText?.length > 100 ? '...' : ''}`);
-    console.log(`Source: ${source}, Attachment: ${attachmentUrl ? 'Yes' : 'No'}`);
-    console.log(`Attachment content extracted: ${attachmentContent ? 'Yes' : 'No'}`);
+    console.log(`[AI-PRIORITY] Processing ${category} complaint for priority determination`);
+    console.log(`[AI-PRIORITY] Content: ${complaintText?.substring(0, 100)}${complaintText?.length > 100 ? '...' : ''}`);
+    console.log(`[AI-PRIORITY] Source: ${source}, Attachment: ${attachmentUrl ? 'Yes' : 'No'}`);
+    console.log(`[AI-PRIORITY] Attachment content extracted: ${attachmentContent ? 'Yes' : 'No'}`);
 
     // If no text is provided, try to use attachment content
     if (!complaintText || complaintText.trim().length === 0) {
       if (attachmentContent) {
         complaintText = `Extracted from ${source}: ${attachmentContent}`;
-        console.log(`Using extracted content as complaint text: ${complaintText.substring(0, 100)}...`);
+        console.log(`[AI-PRIORITY] Using extracted content as complaint text: ${complaintText.substring(0, 100)}...`);
       } else {
         complaintText = "(No text content provided)";
       }
@@ -44,7 +44,7 @@ serve(async (req) => {
     if (textLower === "hello" || textLower === "hi" || textLower === "test" || 
         textLower === "hey" || textLower === "abc" || textLower === "xyz" || 
         textLower.length < 5 || /^[a-z0-9]{1,3}$/i.test(textLower.trim())) {
-      console.log("Detected trivial greeting or test message, assigning LOW priority");
+      console.log("[AI-PRIORITY] Detected trivial greeting or test message, assigning LOW priority");
       return new Response(
         JSON.stringify({ priority: "low" }),
         {
@@ -62,7 +62,7 @@ serve(async (req) => {
       complaintText.includes("EMERGENCY!");
       
     if (hasCapitalizedUrgent) {
-      console.log("Found capitalized URGENT or EMERGENCY, immediately assigning HIGH priority");
+      console.log("[AI-PRIORITY] Found capitalized URGENT or EMERGENCY, immediately assigning HIGH priority");
       return new Response(
         JSON.stringify({ priority: "high" }),
         {
@@ -87,7 +87,7 @@ serve(async (req) => {
       
       for (const pattern of waterEmergencyPatterns) {
         if (pattern.test(textNormalized)) {
-          console.log(`Water emergency pattern matched: ${pattern}`);
+          console.log(`[AI-PRIORITY] Water emergency pattern matched: ${pattern}`);
           return new Response(
             JSON.stringify({ priority: "high" }),
             {
@@ -114,7 +114,7 @@ serve(async (req) => {
       
       for (const pattern of energyEmergencyPatterns) {
         if (pattern.test(textNormalized)) {
-          console.log(`Energy emergency pattern matched: ${pattern}`);
+          console.log(`[AI-PRIORITY] Energy emergency pattern matched: ${pattern}`);
           return new Response(
             JSON.stringify({ priority: "high" }),
             {
@@ -156,11 +156,11 @@ serve(async (req) => {
     }
 
     if (keywordsFound.length > 0) {
-      console.log(`Emergency keywords found: ${keywordsFound.join(', ')}`);
+      console.log(`[AI-PRIORITY] Emergency keywords found: ${keywordsFound.join(', ')}`);
       
       // If multiple emergency keywords are found, assign high priority
       if (keywordsFound.length >= 2) {
-        console.log("Multiple emergency keywords detected, assigning HIGH priority");
+        console.log("[AI-PRIORITY] Multiple emergency keywords detected, assigning HIGH priority");
         return new Response(
           JSON.stringify({ priority: "high" }),
           {
@@ -206,7 +206,7 @@ serve(async (req) => {
       priority = "low";
     }
     
-    console.log(`Severity score: ${severityScore}, assigned priority: ${priority}`);
+    console.log(`[AI-PRIORITY] Severity score: ${severityScore}, assigned priority: ${priority}`);
 
     // Fall back to AI for final decision if not already determined with high confidence
     if (severityScore < 3 && !(textLower === "hello" || textLower === "hi" || textLower === "test")) {
@@ -330,7 +330,7 @@ serve(async (req) => {
       }
     }
 
-    console.log("Final determined priority:", priority);
+    console.log("[AI-PRIORITY] Final determined priority:", priority);
     return new Response(
       JSON.stringify({ priority }),
       {
@@ -339,7 +339,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Error in AI priority function:", error);
+    console.error("[AI-PRIORITY] Error in AI priority function:", error);
     return new Response(
       JSON.stringify({ error: error.message, priority: "medium" }), // Return medium as fallback
       {

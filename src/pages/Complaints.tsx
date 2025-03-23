@@ -297,6 +297,7 @@ const Complaints = () => {
       setPredictionLoading(true);
       
       if (!text.trim() && !extractedContent) {
+        console.log('[Debug] No text or extracted content, defaulting to medium priority');
         setPriority('medium');
         return 'medium';
       }
@@ -313,31 +314,40 @@ const Complaints = () => {
         attachmentContent: extractedContent
       };
       
-      console.log('Sending to AI for priority detection:', payload);
+      console.log('[Debug] Sending to AI for priority detection:', payload);
       
       const { data, error } = await supabase.functions.invoke('ai-priority', {
         body: payload
       });
       
-      console.log('AI Priority response:', data, error);
+      console.log('[Debug] AI Priority raw response:', data, error);
       
       if (error) {
-        console.error('AI Priority error:', error);
+        console.error('[Debug] AI Priority error:', error);
         setPriority('medium');
         return 'medium';
       }
       
       if (data && data.priority) {
-        setPriority(data.priority);
-        toast.success(`AI analysis determined priority: ${data.priority}`);
-        return data.priority;
+        const priorityValue = data.priority.toString().toLowerCase();
+        console.log(`[Debug] AI analysis determined priority: ${priorityValue}`);
+        
+        if (!['low', 'medium', 'high'].includes(priorityValue)) {
+          console.warn(`[Debug] Unexpected priority value: ${priorityValue}, defaulting to medium`);
+          setPriority('medium');
+          return 'medium';
+        }
+        
+        setPriority(priorityValue);
+        toast.success(`AI analysis determined priority: ${priorityValue}`);
+        return priorityValue;
       } else {
-        console.warn('No priority returned from AI, using medium');
+        console.warn('[Debug] No priority returned from AI, using medium');
         setPriority('medium');
         return 'medium';
       }
     } catch (error) {
-      console.error('Error getting AI priority:', error);
+      console.error('[Debug] Error getting AI priority:', error);
       setPriority('medium');
       return 'medium';
     } finally {
@@ -398,7 +408,7 @@ const Complaints = () => {
       }
       
       let determinedPriority = await getPriorityFromAI(content);
-      console.log('Using AI-determined priority:', determinedPriority);
+      console.log('[Debug] Using AI-determined priority:', determinedPriority);
       
       if (activeTab === 'voice' && audioBlob) {
         const audioFile = new File([audioBlob], 'voice-recording.wav', { type: 'audio/wav' });
@@ -430,7 +440,7 @@ const Complaints = () => {
         attachment_url
       };
       
-      console.log('Submitting complaint with data:', newComplaint);
+      console.log('[Debug] Submitting complaint with data:', newComplaint);
       
       const { data, error } = await supabase
         .from('complaints')
@@ -438,9 +448,11 @@ const Complaints = () => {
         .select();
       
       if (error) {
-        console.error('Database error:', error);
+        console.error('[Debug] Database error during insert:', error);
         throw error;
       }
+      
+      console.log('[Debug] Insert successful, returned data:', data);
       
       if (data && data.length > 0) {
         toast.success('Complaint submitted successfully!');
@@ -459,7 +471,7 @@ const Complaints = () => {
         throw new Error('No data returned from database');
       }
     } catch (error: any) {
-      console.error('Error submitting complaint:', error);
+      console.error('[Debug] Error submitting complaint:', error);
       setSubmissionError(error.message || 'Unknown error occurred');
       toast.error('Failed to submit complaint: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
