@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { decode as base64Decode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
@@ -72,7 +73,7 @@ serve(async (req) => {
       );
     }
 
-    // Detect significant water-related emergency patterns
+    // Detect significant water-related emergency patterns - moved before scoring for fast path
     if (category === "water") {
       const waterEmergencyPatterns = [
         /burst\s+(?:water\s+)?(?:pipe|main)/i,
@@ -82,7 +83,8 @@ serve(async (req) => {
         /leak(?:age|ing)\s+(?:severe|major|big|large)/i,
         /sewage|sewer\s+(?:leak|overflow|backup)/i,
         /(?:brown|yellow|dirty)\s+water/i,
-        /(?:foul|bad)\s+(?:smell|odor)\s+(?:from|in)\s+water/i
+        /(?:foul|bad)\s+(?:smell|odor)\s+(?:from|in)\s+water/i,
+        /major\s+(?:leak|pipe|water)/i
       ];
       
       for (const pattern of waterEmergencyPatterns) {
@@ -192,24 +194,34 @@ serve(async (req) => {
     // Check if the complaint has a properly constructed sentence structure (often indicates real complaints)
     if (/[A-Z].*\.(\s|$)/.test(textNormalized)) severityScore += 1;
 
-    // Major leak pattern detection
-    if (/major\s+(?:leak|pipe|water)/i.test(textLower)) {
+    // Major leak pattern detection - specifically check again to be sure
+    if (/major\s+(?:leak|pipe|water)/i.test(textLower) || /burst.*pipe|burst.*main/i.test(textLower)) {
+      severityScore += 3;
+      console.log("Major leak/pipeline mentioned - significantly increasing severity score");
+    }
+    
+    // Add weight for water or energy outage affecting multiple people
+    if (/no\s+(?:water|electricity|power).*(?:entire|multiple|many|all)/i.test(textLower)) {
       severityScore += 2;
-      console.log("Major leak/pipeline mentioned - increasing severity score");
+      console.log("Service outage affecting multiple people detected - increasing severity score");
     }
 
+    console.log(`[AI-PRIORITY] Severity score: ${severityScore}`);
+    
     // Determine priority based on score
     let priority = "medium"; // Default
     if (severityScore >= 3) {
       priority = "high";
+      console.log("[AI-PRIORITY] High severity score detected, assigning HIGH priority");
     } else if (severityScore <= 0) {
       priority = "low";
+      console.log("[AI-PRIORITY] Low severity score detected, assigning LOW priority");
+    } else {
+      console.log("[AI-PRIORITY] Medium severity score detected, falling back to AI");
     }
-    
-    console.log(`[AI-PRIORITY] Severity score: ${severityScore}, assigned priority: ${priority}`);
 
-    // Fall back to AI for final decision if not already determined with high confidence
-    if (severityScore < 3 && !(textLower === "hello" || textLower === "hi" || textLower === "test")) {
+    // Fall back to AI for final decision if not already determined with high confidence and not a test message
+    if (severityScore < 3 && severityScore > 0 && !(textLower === "hello" || textLower === "hi" || textLower === "test")) {
       // Create a detailed prompt for the AI
       const prompt = `
       You are an AI assistant for the PCMC (Pimpri Chinchwad Municipal Corporation) Smart City initiative.
@@ -317,9 +329,11 @@ serve(async (req) => {
               priority = "low";
             }
             
-            // Special override for burst pipes and major leaks to ensure they're always high priority
-            if ((/burst.*pipe|burst.*main|major.*leak/i.test(textLower)) && priority !== "high") {
-              console.log("Overriding AI decision for burst pipe/major leak to HIGH priority");
+            // Special override for burst pipes, major leaks, and service outages to ensure high priority
+            if ((/burst.*pipe|burst.*main|major.*leak/i.test(textLower) || 
+                /no\s+(?:water|electricity|power).*(?:entire|multiple|many|all)/i.test(textLower)) && 
+                priority !== "high") {
+              console.log("Overriding AI decision for critical infrastructure issue to HIGH priority");
               priority = "high";
             }
           }
