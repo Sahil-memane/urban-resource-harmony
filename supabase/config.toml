@@ -13,12 +13,12 @@ public = true
 file_size_limit = "10MB"
 
 [storage.buckets.allowed_mime_types]
-"image/jpeg" = true
-"image/png" = true
-"image/gif" = true
-"image/webp" = true
-"application/pdf" = true
-"audio/mp3" = true
-"audio/wav" = true
-"audio/ogg" = true
-"audio/mpeg" = true
+image/jpeg = true
+image/png = true 
+image/gif = true
+image/webp = true
+application/pdf = true
+audio/mp3 = true
+audio/wav = true
+audio/ogg = true
+audio/mpeg = true
