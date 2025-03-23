@@ -397,10 +397,8 @@ const Complaints = () => {
           break;
       }
       
-      let determinedPriority = priority;
-      if (!determinedPriority) {
-        determinedPriority = await getPriorityFromAI(content) || 'medium';
-      }
+      let determinedPriority = await getPriorityFromAI(content);
+      console.log('Using AI-determined priority:', determinedPriority);
       
       if (activeTab === 'voice' && audioBlob) {
         const audioFile = new File([audioBlob], 'voice-recording.wav', { type: 'audio/wav' });
@@ -432,7 +430,7 @@ const Complaints = () => {
         attachment_url
       };
       
-      console.log('Submitting complaint:', newComplaint);
+      console.log('Submitting complaint with data:', newComplaint);
       
       const { data, error } = await supabase
         .from('complaints')

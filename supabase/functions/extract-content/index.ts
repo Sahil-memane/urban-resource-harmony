@@ -25,7 +25,7 @@ serve(async (req) => {
       throw new Error("No file URL provided");
     }
 
-    console.log(`Extracting content from ${fileType} file: ${fileUrl}`);
+    console.log(`Extracting content from ${fileType} file: ${fileUrl.substring(0, 50)}...`);
 
     // Create a specialized prompt based on file type
     let prompt = "";
@@ -73,7 +73,7 @@ serve(async (req) => {
       `;
     }
 
-    // Call Gemini for image understanding
+    // Call Gemini for content understanding
     const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent", {
       method: "POST",
       headers: {
