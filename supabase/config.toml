@@ -10,7 +10,7 @@ enabled = true
 [[storage.buckets]]
 name = "complaint-attachments"
 public = true
-file_size_limit = "10485760"
+file_size_limit = "10MB"
 
 [storage.buckets.allowed_mime_types]
 "image/jpeg" = true
