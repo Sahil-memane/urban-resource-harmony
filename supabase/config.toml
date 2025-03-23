@@ -14,7 +14,7 @@ file_size_limit = "10MB"
 
 [storage.buckets.allowed_mime_types]
 "image/jpeg" = true
-"image/png" = true 
+"image/png" = true
 "image/gif" = true
 "image/webp" = true
 "application/pdf" = true
