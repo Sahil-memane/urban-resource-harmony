@@ -1,5 +1,5 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { decode as base64Decode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,40 +18,39 @@ serve(async (req) => {
       throw new Error("GEMINI_API_KEY is not set");
     }
 
-    const { complaintText, category, attachmentUrl, source } = await req.json();
-
-    if (!complaintText && !attachmentUrl) {
-      return new Response(
-        JSON.stringify({ error: "Missing complaint text or attachment" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
+    let { complaintText, category, attachmentUrl, source, attachmentContent } = await req.json();
 
     console.log(`Processing ${category} complaint for priority determination`);
     console.log(`Content: ${complaintText?.substring(0, 100)}${complaintText?.length > 100 ? '...' : ''}`);
     console.log(`Source: ${source}, Attachment: ${attachmentUrl ? 'Yes' : 'No'}`);
+    console.log(`Attachment content extracted: ${attachmentContent ? 'Yes' : 'No'}`);
 
-    // Initial keyword-based priority check (fast path for obvious emergencies)
-    const emergencyKeywords = [
-      "urgent", "emergency", "immediate", "dangerous", "hazard", "risk", 
-      "life-threatening", "fire", "flood", "leakage", "burst", "contamination", 
-      "sick", "health", "live wire", "sparking", "danger", "critical", "severe",
-      "unsafe", "toxic", "exposed", "electrical shock", "drowning"
-    ];
-    
-    // Check if complaint has clear emergency indicators
-    const textLower = (complaintText || "").toLowerCase();
-    const isUrgentByKeywords = emergencyKeywords.some(keyword => textLower.includes(keyword));
-    
-    // If complaint is very short (1-3 characters) and not clearly an emergency, 
-    // default to medium without calling the AI
-    if (complaintText && complaintText.length <= 3 && !isUrgentByKeywords) {
-      console.log("Very short complaint, assigning default medium priority");
+    // If no text is provided, try to use attachment content
+    if (!complaintText || complaintText.trim().length === 0) {
+      if (attachmentContent) {
+        complaintText = `Extracted from ${source}: ${attachmentContent}`;
+        console.log(`Using extracted content as complaint text: ${complaintText.substring(0, 100)}...`);
+      } else {
+        complaintText = "(No text content provided)";
+      }
+    }
+
+    // Sanitize and normalize the complaint text
+    // Remove excessive whitespace, normalize case for keyword detection
+    const textNormalized = complaintText.replace(/\s+/g, ' ').trim();
+    const textLower = textNormalized.toLowerCase();
+
+    // Fast path for complaints with "URGENT" or "EMERGENCY" in all caps
+    const hasCapitalizedUrgent = 
+      complaintText.includes("URGENT") || 
+      complaintText.includes("EMERGENCY") || 
+      complaintText.includes("URGENT!") ||
+      complaintText.includes("EMERGENCY!");
+      
+    if (hasCapitalizedUrgent) {
+      console.log("Found capitalized URGENT or EMERGENCY, immediately assigning HIGH priority");
       return new Response(
-        JSON.stringify({ priority: "medium" }),
+        JSON.stringify({ priority: "high" }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200,
@@ -59,13 +58,67 @@ serve(async (req) => {
       );
     }
 
-    // Immediate high priority for complaints with capitalized "URGENT" or "EMERGENCY"
-    if (textLower.includes("urgent") || textLower.includes("emergency")) {
-      const hasCapitalizedUrgent = complaintText?.includes("URGENT") || complaintText?.includes("EMERGENCY");
-      if (hasCapitalizedUrgent) {
-        console.log("Found capitalized URGENT or EMERGENCY, immediately assigning high priority");
+    // Emergency keywords - expanded list with more comprehensive terms
+    const emergencyKeywords = [
+      // General emergency terms
+      "urgent", "emergency", "immediate", "immediately", "critical", "dangerous", "hazard", "risk", 
+      "life-threatening", "severe", "serious", "crucial", "vital", "dire", "extreme",
+      
+      // Water-specific emergency terms
+      "burst pipe", "burst main", "flooding", "water leak", "major leak", "broken pipe", "sewage overflow",
+      "contamination", "contaminated", "no water", "water outage", "water shortage", "dirty water",
+      "brown water", "unsafe water", "drinking water", "water pressure", "water quality",
+      
+      // Energy-specific emergency terms
+      "power outage", "no electricity", "power failure", "live wire", "exposed wire", "sparking",
+      "electricity hazard", "electrical fire", "transformer", "blackout", "power surge",
+      "short circuit", "electrical shock", "electric shock", "fire risk", "burning", "smoke",
+      
+      // Health and safety terms
+      "health hazard", "public safety", "sick", "ill", "child", "elderly", "hospital", "school",
+      "injured", "injury", "accident", "fallen", "collapse", "trap", "damage", "destroy"
+    ];
+    
+    // Check if complaint contains obvious emergency indicators
+    let isUrgentByKeywords = false;
+    let keywordsFound = [];
+
+    // Count matched keywords and keep track of which ones were found
+    for (const keyword of emergencyKeywords) {
+      if (textLower.includes(keyword)) {
+        keywordsFound.push(keyword);
+        if (keywordsFound.length >= 2) { // If 2 or more emergency keywords are found
+          isUrgentByKeywords = true;
+          break;
+        }
+      }
+    }
+
+    if (keywordsFound.length > 0) {
+      console.log(`Emergency keywords found: ${keywordsFound.join(', ')}`);
+    }
+
+    // If complaint is very short and not clearly an emergency, handle specially
+    if (complaintText.length <= 10 && !isUrgentByKeywords) {
+      // Trivial complaints like "hello", "test", "hi" get low priority
+      const trivialWords = ["hello", "hi", "test", "hey", "xyz", "abc"];
+      
+      if (trivialWords.some(word => textLower.trim() === word)) {
+        console.log("Trivial greeting or test message detected, assigning LOW priority");
         return new Response(
-          JSON.stringify({ priority: "high" }),
+          JSON.stringify({ priority: "low" }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+      
+      // Single digit or letter complaints get medium as default
+      if (/^[a-z0-9]$/i.test(complaintText.trim())) {
+        console.log("Single character complaint, assigning MEDIUM priority as default");
+        return new Response(
+          JSON.stringify({ priority: "medium" }),
           {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 200,
@@ -74,65 +127,83 @@ serve(async (req) => {
       }
     }
 
-    // Load appropriate examples from the sample complaints based on category
-    let categorySpecificExamples = "";
+    // More sophisticated pattern matching for category-specific emergency situations
+    let emergencyDetected = false;
+    
+    // Water-specific emergency patterns
     if (category === "water") {
-      categorySpecificExamples = `
-      HIGH PRIORITY EXAMPLES:
-      - "Burst water main on Alandi Road near Shivar Chowk. Water flooding the street and causing traffic disruption."
-      - "No water supply in entire G Block, Pimpri for the last 24 hours. Multiple residents affected including elderly and infants."
-      - "Contaminated water with strong smell coming from taps in Sector 25, Nigdi. Water appears brownish and has foul odor."
-      - "Water leakage flooding basement parking of our building, risk of electrical short circuit."
-      - "Sewage mixing with drinking water in our society, people falling sick."
-      - "Main water line broken near Sector 10, water gushing onto road creating hazard"
-      - "Water contamination causing illness in multiple households in our society"
+      const waterEmergencyPatterns = [
+        /burst\s+(?:water\s+)?(?:pipe|main)/i,
+        /flood(?:ing)?/i,
+        /no\s+water\s+(?:supply|service)/i,
+        /contaminat(?:ed|ion)/i,
+        /leak(?:age|ing)\s+(?:severe|major|big|large)/i,
+        /sewage|sewer\s+(?:leak|overflow|backup)/i,
+        /(?:brown|yellow|dirty)\s+water/i,
+        /(?:foul|bad)\s+(?:smell|odor)\s+(?:from|in)\s+water/i
+      ];
       
-      MEDIUM PRIORITY EXAMPLES:
-      - "Low water pressure in D Wing, Krushna Housing Society for the past 2 days. Only getting water on ground floor."
-      - "Intermittent water supply in Sector 18, PCNTDA. Water comes only for 30 minutes instead of scheduled 2 hours."
-      - "Water meter showing incorrect readings at 45/2 Pimpri Housing Society. Bill amount almost doubled from previous month."
-      - "Water connection was supposed to be installed last week but work not completed yet."
-      - "Brown water coming from taps occasionally, not constant"
+      for (const pattern of waterEmergencyPatterns) {
+        if (pattern.test(textNormalized)) {
+          console.log(`Water emergency pattern matched: ${pattern}`);
+          emergencyDetected = true;
+          break;
+        }
+      }
+    }
+    
+    // Energy-specific emergency patterns
+    else if (category === "energy") {
+      const energyEmergencyPatterns = [
+        /(?:live|exposed|broken|down|hanging)\s+(?:wire|cable|power\s+line)/i,
+        /electric(?:al)?\s+(?:shock|hazard|fire)/i,
+        /(?:transformer|pole|power\s+line)\s+(?:fire|burning|smoke|fallen|down|damaged)/i,
+        /(?:complete|total)\s+(?:power\s+)?outage/i,
+        /no\s+electricity|no\s+power/i,
+        /fire\s+(?:risk|hazard)/i,
+        /spark(?:ing|s)/i,
+        /(?:burn(?:ing|t)|smoke)/i
+      ];
       
-      LOW PRIORITY EXAMPLES:
-      - "Need information on water supply schedule during the upcoming Ganesh festival."
-      - "Water bill payment website not working properly. Unable to make online payment."
-      - "Request for water quality report for Chinchwad area. Is the hardness level within acceptable limits?"
-      - "Looking for information about how to apply for new water connection."
-      - "Small drip from bathroom tap, not urgent"
-      `;
-    } else if (category === "energy") {
-      categorySpecificExamples = `
-      HIGH PRIORITY EXAMPLES:
-      - "Live wire fallen on road in Akurdi near Dmart. Extremely dangerous situation."
-      - "Transformer sparking and smoking in Morwadi, Pimpri. Risk of fire to nearby buildings."
-      - "Complete power outage in Sector 27, Nigdi for over 12 hours. Multiple residential societies affected."
-      - "Electric pole leaning dangerously after last night's storm, may fall any time."
-      - "Frequent power surges damaging appliances and risk of fire in our building."
-      - "Exposed wires in children's playground area, immediate danger"
-      - "Burning smell from electric meter box in our building"
-      
-      MEDIUM PRIORITY EXAMPLES:
-      - "Frequent power fluctuations damaging appliances in our building in Chinchwad East."
-      - "Street lights not working on the entire stretch of Aundh Road, causing safety concerns at night."
-      - "Power outage in specific wing of our society while other wings have electricity."
-      - "Electricity meter appears to be running fast, showing excess consumption."
-      - "Flickering streetlights in our area for past week"
-      
-      LOW PRIORITY EXAMPLES:
-      - "Need information about solar panel installation procedure and subsidies offered by PCMC."
-      - "Want to understand peak hour electricity rates for small businesses."
-      - "Request for information on upcoming maintenance schedule in Bhosari area."
-      - "Question about electricity bill calculation methodology."
-      - "One streetlight not working in our lane"
-      `;
+      for (const pattern of energyEmergencyPatterns) {
+        if (pattern.test(textNormalized)) {
+          console.log(`Energy emergency pattern matched: ${pattern}`);
+          emergencyDetected = true;
+          break;
+        }
+      }
+    }
+    
+    // If a clear emergency pattern is detected
+    if (emergencyDetected) {
+      console.log("Emergency pattern detected, assigning HIGH priority");
+      return new Response(
+        JSON.stringify({ priority: "high" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    }
+
+    // If we have multiple emergency keywords, assign high priority
+    if (isUrgentByKeywords) {
+      console.log("Multiple emergency keywords detected, assigning HIGH priority");
+      return new Response(
+        JSON.stringify({ priority: "high" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
     }
 
     // Create a more comprehensive and detailed prompt for the AI
     const prompt = `
     You are an AI assistant for the PCMC (Pimpri Chinchwad Municipal Corporation) Smart City initiative.
     Your task is to analyze the following ${category} complaint and determine its priority level based on severity, impact, and urgency.
-    I need you to return ONLY "high", "medium", or "low" as your answer, nothing else.
+    
+    IMPORTANT: I need you to return ONLY "high", "medium", or "low" as your answer, no other text or explanation.
     
     PRIORITY LEVELS EXPLAINED:
     - HIGH: Issues posing immediate risk to public safety, health, or critical infrastructure. Requires immediate attention (0-24 hours).
@@ -144,13 +215,41 @@ serve(async (req) => {
     - LOW: Minor issues or general inquiries that can be scheduled for routine handling (3+ days).
       Examples: General inquiries, future billing concerns, information requests, minor cosmetic issues with infrastructure.
 
-    ${categorySpecificExamples}
+    Comprehensive examples for each priority level:
+
+    HIGH PRIORITY EXAMPLES:
+    - "Burst water main on Alandi Road near Shivar Chowk. Water flooding the street causing traffic disruption."
+    - "Live wire fallen on road in Akurdi near Dmart. Extremely dangerous situation."
+    - "No water supply in entire G Block, Pimpri for 24+ hours. Multiple residents affected including elderly."
+    - "Transformer sparking and smoking in Morwadi. Risk of fire to nearby buildings."
+    - "Contaminated water with strong smell coming from taps in Sector 25. People falling sick."
+    - "Electric pole leaning dangerously after storm, may fall any time."
+    - "Power outage affecting hospital area in Chinchwad for over 6 hours."
+    - "Sewage mixing with drinking water in our society, children falling ill."
+    
+    MEDIUM PRIORITY EXAMPLES:
+    - "Low water pressure in D Wing for the past 2 days. Only getting water on ground floor."
+    - "Intermittent power fluctuations damaging appliances in our building."
+    - "Street lights not working on the entire stretch of Aundh Road causing safety concerns."
+    - "Water meter showing incorrect readings, bill amount doubled from previous month."
+    - "Power outage in specific wing of society while other wings have electricity."
+    - "Brown water coming from taps occasionally, not constant or severe."
+    - "Water connection was supposed to be installed last week but work not completed."
+    
+    LOW PRIORITY EXAMPLES:
+    - "Need information on water supply schedule during the upcoming festival."
+    - "Water bill payment website not working properly. Unable to make online payment."
+    - "Request for information about how to apply for new water connection."
+    - "Want to understand peak hour electricity rates for small businesses."
+    - "Small drip from bathroom tap, not urgent"
+    - "One streetlight not working in our lane"
+    - "Question about electricity bill calculation methodology."
     
     COMPLAINT SOURCE: ${source}
     ${attachmentUrl ? `ATTACHMENT INCLUDED: Yes` : ''}
-    COMPLAINT ABOUT ${category.toUpperCase()} SERVICES: ${complaintText}
-    
-    Emergency keywords to look for: urgent, immediate, dangerous, hazard, risk, emergency, life-threatening, fire, flood, leakage, burst, contamination, sick, health, live wire, sparking, outage, no supply.
+    ${attachmentContent ? `EXTRACTED CONTENT FROM ATTACHMENT: ${attachmentContent}` : ''}
+    COMPLAINT CATEGORY: ${category.toUpperCase()}
+    COMPLAINT TEXT: ${complaintText}
     
     Consider the following in your analysis:
     1. Is there an immediate health or safety risk?
@@ -158,23 +257,11 @@ serve(async (req) => {
     3. Is essential service completely disrupted or just diminished?
     4. Is there property damage or environmental harm?
     5. Are vulnerable populations (elderly, children, hospitals) affected?
-    6. Does the complaint contain any emergency keywords?
-    7. Is the complaint about a complete service outage or just partial disruption?
+    6. Is the complaint about a complete service outage or partial disruption?
+    7. Is the language of the complaint indicating urgency (CAPS, exclamation marks, urgent/emergency terms)?
     
-    Respond with ONLY one of the following words, with no other text or explanation whatsoever: "high", "medium", or "low"
+    Answer with ONLY one word: "high", "medium", or "low"
     `;
-
-    // Skip AI call if the text is extremely short and not a clear emergency
-    if (complaintText && complaintText.length <= 5 && !isUrgentByKeywords) {
-      console.log("Very short non-emergency complaint, skipping AI call");
-      return new Response(
-        JSON.stringify({ priority: "medium" }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        }
-      );
-    }
 
     console.log("Calling Gemini API for priority assessment");
     const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent", {
@@ -199,6 +286,7 @@ serve(async (req) => {
     });
 
     const data = await response.json();
+    console.log("Received Gemini API response:", JSON.stringify(data).substring(0, 200) + "...");
     
     // Apply fallback logic with keyword analysis if AI fails
     let priority = "medium"; // Default fallback
@@ -221,46 +309,15 @@ serve(async (req) => {
         console.warn("No valid response from AI, using fallback priority detection");
         
         // Enhanced keyword analysis as fallback
-        if (isUrgentByKeywords) {
+        if (emergencyDetected || isUrgentByKeywords) {
           priority = "high";
-          console.log("Emergency keywords detected, setting high priority");
+          console.log("Emergency condition detected, setting HIGH priority");
+        } else if (keywordsFound.length > 0) {
+          priority = "medium"; 
+          console.log("Some concerning keywords found, setting MEDIUM priority");
         } else {
           // More detailed text analysis
-          const emergencyPatterns = {
-            water: [
-              /burst\s+(?:water\s+)?(?:pipe|main)/i, // Burst pipes/mains
-              /flood/i, // Flooding situations
-              /no\s+water\s+(?:supply|service)/i, // No water supply
-              /contamina(?:ted|tion)/i, // Contamination issues
-              /leak(?:age|ing)\s+(?:severe|major|big|large)/i, // Major leaks
-              /sewage\s+(?:in|mixing)/i, // Sewage issues
-              /water\s+(?:quality|unsafe|undrinkable)/i, // Water quality
-              /brown|yellow|cloudy\s+water/i, // Discolored water
-              /(?:foul|bad)\s+(?:smell|odor)/i, // Bad smell in water
-            ],
-            energy: [
-              /(?:live|exposed|broken|down)\s+(?:wire|cable)/i, // Exposed wires
-              /electric(?:al)?\s+(?:shock|hazard)/i, // Electrical hazards
-              /(?:transformer|pole)\s+(?:fire|burning|smoke|fallen|down)/i, // Transformer issues
-              /(?:complete|total)\s+(?:power\s+)?outage/i, // Complete outages
-              /no\s+electricity|no\s+power/i, // No electricity
-              /fire\s+(?:risk|hazard)/i, // Fire risks
-              /spark(?:ing|s)/i, // Sparking
-              /(?:burn(?:ing|t)|smoke)/i, // Burning or smoke
-            ],
-          };
-
           let severityScore = 0;
-          
-          // Check for category-specific emergency patterns
-          if (category in emergencyPatterns) {
-            for (const pattern of emergencyPatterns[category]) {
-              if (pattern.test(textLower)) {
-                severityScore += 2;
-                console.log(`Emergency pattern matched: ${pattern}, score +2`);
-              }
-            }
-          }
           
           // Check general emergency patterns
           if (/urgent|emergency|immediate|asap/i.test(textLower)) severityScore += 2;
@@ -269,6 +326,10 @@ serve(async (req) => {
           if (/many|multiple|entire|all|everyone|whole/i.test(textLower)) severityScore += 1; // Many affected
           if (/since\s+\d+\s+(?:hour|day|week)/i.test(textLower)) severityScore += 1; // Long duration
           if (/damage(?:d|s)?|destroy(?:ed|s)?/i.test(textLower)) severityScore += 1; // Property damage
+          
+          // Check for emphasized text (ALL CAPS, multiple exclamation marks)
+          const hasEmphasis = /[A-Z]{4,}/.test(complaintText) || /!!+/.test(complaintText);
+          if (hasEmphasis) severityScore += 1;
           
           // Determine priority based on score
           if (severityScore >= 3) {
@@ -286,38 +347,41 @@ serve(async (req) => {
       console.error("Error extracting priority from AI response:", error);
       
       // Even more robust fallback with basic text analysis
-      const textLower = complaintText?.toLowerCase() || '';
-      if (
-        textLower.includes("urgent") || 
-        textLower.includes("emergency") || 
-        textLower.includes("immediate") || 
-        textLower.includes("dangerous") || 
-        textLower.includes("hazard") || 
-        textLower.includes("health") || 
-        textLower.includes("safety") ||
-        textLower.includes("no water") ||
-        textLower.includes("burst") ||
-        textLower.includes("leakage") ||
-        textLower.includes("flooding") ||
-        textLower.includes("live wire") ||
-        textLower.includes("fire") ||
-        textLower.includes("risk")
-      ) {
+      if (emergencyDetected || isUrgentByKeywords) {
         priority = "high";
-      } else if (
-        textLower.includes("problem") || 
-        textLower.includes("issue") || 
-        textLower.includes("not working") || 
-        textLower.includes("broken") ||
-        textLower.includes("interrupted") ||
-        textLower.includes("intermittent")
-      ) {
+      } else if (keywordsFound.length > 0) {
         priority = "medium";
-      } else {
+      } else if (
+        textLower.includes("hello") || 
+        textLower.includes("hi") || 
+        textLower.includes("test") || 
+        textLower.includes("hey") ||
+        textLower.length < 5
+      ) {
         priority = "low";
+      } else {
+        priority = "medium";
       }
       
-      console.log("Using emergency keyword fallback, assigned priority:", priority);
+      console.log("Using simple text analysis fallback, assigned priority:", priority);
+    }
+
+    // For very short "test" type messages that made it through other checks
+    if (textLower.length < 10 && 
+        (textLower === "hello" || 
+         textLower === "hi" || 
+         textLower === "test" || 
+         textLower === "hey" ||
+         /^[a-z0-9]{1,2}$/i.test(textLower))) {
+      console.log("Overriding with LOW priority for test-like message:", textLower);
+      priority = "low";
+    }
+
+    // For urgent complaints that made it through other checks
+    const urgentTerms = ["urgent", "emergency", "immediate", "asap"];
+    if (urgentTerms.some(term => textLower.includes(term)) && priority !== "high") {
+      console.log("Overriding to at least MEDIUM priority due to urgent terms");
+      priority = priority === "low" ? "medium" : priority;
     }
 
     console.log("Final determined priority:", priority);

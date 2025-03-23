@@ -56,11 +56,12 @@ const Complaints = () => {
   const [isLoadingComplaints, setIsLoadingComplaints] = useState(true);
   const [predictionLoading, setPredictionLoading] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
-  
+  const [extractionLoading, setExtractionLoading] = useState(false);
+  const [extractedContent, setExtractedContent] = useState<string | null>(null);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   
-  // TypeScript declaration for SpeechRecognition
   type SpeechRecognitionType = {
     continuous: boolean;
     interimResults: boolean;
@@ -125,9 +126,54 @@ const Complaints = () => {
     setAudioBlob(null);
     setTranscription('');
     setSubmissionError(null);
+    setExtractedContent(null);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const extractContentFromAttachment = async (file: File | Blob, fileType: 'image' | 'pdf' | 'audio'): Promise<string | null> => {
+    try {
+      setExtractionLoading(true);
+      
+      const fileUrl = URL.createObjectURL(file);
+      
+      const base64Data = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          resolve(base64);
+        };
+        reader.readAsDataURL(file);
+      });
+      
+      console.log(`Extracting content from ${fileType} attachment`);
+      
+      const { data, error } = await supabase.functions.invoke('extract-content', {
+        body: {
+          fileUrl: base64Data,
+          fileType
+        }
+      });
+      
+      if (error) {
+        console.error('Error extracting content:', error);
+        return null;
+      }
+      
+      if (data && data.extracted) {
+        setExtractedContent(data.extracted);
+        console.log('Extracted content:', data.extracted);
+        return data.extracted;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error extracting content from attachment:', error);
+      return null;
+    } finally {
+      setExtractionLoading(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       
@@ -142,6 +188,13 @@ const Complaints = () => {
       }
       
       setSelectedFile(file);
+      
+      const fileType = file.type.startsWith('image/') ? 'image' : 'pdf';
+      const content = await extractContentFromAttachment(file, fileType);
+      
+      if (content) {
+        toast.success('Content extracted from file for AI analysis');
+      }
     }
   };
 
@@ -163,13 +216,20 @@ const Complaints = () => {
         }
       };
       
-      mediaRecorderRef.current.onstop = () => {
+      mediaRecorderRef.current.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
         setAudioBlob(audioBlob);
         const audioUrl = URL.createObjectURL(audioBlob);
         setAudioUrl(audioUrl);
         
         stream.getTracks().forEach(track => track.stop());
+        
+        if (audioBlob.size > 0) {
+          const content = await extractContentFromAttachment(audioBlob, 'audio');
+          if (content) {
+            toast.success('Audio transcribed for AI analysis');
+          }
+        }
       };
       
       mediaRecorderRef.current.start();
@@ -177,7 +237,6 @@ const Complaints = () => {
       toast.info('Recording started... Speak now');
       
       try {
-        // @ts-ignore - Handling browser compatibility
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
           recognitionRef.current = new SpeechRecognition() as SpeechRecognitionType;
@@ -237,18 +296,21 @@ const Complaints = () => {
     try {
       setPredictionLoading(true);
       
-      // If no text is provided, return default priority
-      if (!text.trim()) {
+      if (!text.trim() && !extractedContent) {
         setPriority('medium');
         return 'medium';
       }
       
-      // Prepare a more robust payload with all available context
+      const completeText = extractedContent 
+        ? `${text}\n[EXTRACTED CONTENT: ${extractedContent}]` 
+        : text;
+      
       const payload = { 
-        complaintText: text, 
+        complaintText: completeText, 
         category,
         source: activeTab,
-        attachmentUrl: audioUrl || (selectedFile ? URL.createObjectURL(selectedFile) : null)
+        attachmentUrl: audioUrl || (selectedFile ? URL.createObjectURL(selectedFile) : null),
+        attachmentContent: extractedContent
       };
       
       console.log('Sending to AI for priority detection:', payload);
@@ -270,7 +332,6 @@ const Complaints = () => {
         toast.success(`AI analysis determined priority: ${data.priority}`);
         return data.priority;
       } else {
-        // Fallback to medium if no priority is returned
         console.warn('No priority returned from AI, using medium');
         setPriority('medium');
         return 'medium';
@@ -300,7 +361,6 @@ const Complaints = () => {
     try {
       setIsSubmitting(true);
       
-      // Check authentication
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
@@ -309,7 +369,6 @@ const Complaints = () => {
         return;
       }
       
-      // Validate and prepare content based on active tab
       switch (activeTab) {
         case 'text':
           if (!complaintText.trim()) {
@@ -326,7 +385,7 @@ const Complaints = () => {
             return;
           }
           
-          content = transcription.trim() ? transcription : 'Voice complaint recorded (no transcription available)';
+          content = transcription.trim() || extractedContent || 'Voice complaint recorded (no transcription available)';
           break;
         case 'image':
           if (!selectedFile) {
@@ -334,17 +393,15 @@ const Complaints = () => {
             setIsSubmitting(false);
             return;
           }
-          content = `Image complaint: ${selectedFile.name || 'Image-based complaint'}`;
+          content = extractedContent || `Image complaint: ${selectedFile.name || 'Image-based complaint'}`;
           break;
       }
       
-      // Determine priority
       let determinedPriority = priority;
       if (!determinedPriority) {
         determinedPriority = await getPriorityFromAI(content) || 'medium';
       }
       
-      // Handle file uploads
       if (activeTab === 'voice' && audioBlob) {
         const audioFile = new File([audioBlob], 'voice-recording.wav', { type: 'audio/wav' });
         
@@ -390,7 +447,6 @@ const Complaints = () => {
       if (data && data.length > 0) {
         toast.success('Complaint submitted successfully!');
         
-        // Reset form
         setComplaintText('');
         setCategory('');
         setPriority('');
@@ -398,8 +454,8 @@ const Complaints = () => {
         setAudioBlob(null);
         setSelectedFile(null);
         setTranscription('');
+        setExtractedContent(null);
         
-        // Refresh complaints list
         fetchComplaints();
       } else {
         throw new Error('No data returned from database');
@@ -530,9 +586,19 @@ const Complaints = () => {
                               variant={isRecording ? "destructive" : "default"}
                               className="mb-2"
                               onClick={toggleRecording}
+                              disabled={extractionLoading}
                             >
-                              <Mic className="mr-2 h-4 w-4" />
-                              {isRecording ? 'Stop Recording' : 'Start Recording'}
+                              {isRecording ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Stop Recording
+                                </>
+                              ) : (
+                                <>
+                                  <Mic className="mr-2 h-4 w-4" />
+                                  Start Recording
+                                </>
+                              )}
                             </Button>
                             
                             {audioUrl && (
@@ -545,11 +611,22 @@ const Complaints = () => {
                               </div>
                             )}
                             
-                            {transcription && (
+                            {(transcription || extractedContent) && (
                               <div className="mt-4 w-full">
-                                <p className="text-sm font-medium mb-1">Transcription:</p>
+                                <p className="text-sm font-medium mb-1">
+                                  {extractionLoading ? (
+                                    <span className="flex items-center">
+                                      <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                                      Analyzing audio...
+                                    </span>
+                                  ) : (
+                                    "Content detected:"
+                                  )}
+                                </p>
                                 <div className="p-3 bg-muted rounded">
-                                  <p className="text-sm">{transcription}</p>
+                                  <p className="text-sm">
+                                    {transcription || extractedContent || "Processing..."}
+                                  </p>
                                 </div>
                               </div>
                             )}
@@ -570,9 +647,19 @@ const Complaints = () => {
                               variant="outline"
                               className="mb-2"
                               onClick={handleBrowseClick}
+                              disabled={extractionLoading}
                             >
-                              <FileImage className="mr-2 h-4 w-4" />
-                              Browse Files
+                              {extractionLoading ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Analyzing...
+                                </>
+                              ) : (
+                                <>
+                                  <FileImage className="mr-2 h-4 w-4" />
+                                  Browse Files
+                                </>
+                              )}
                             </Button>
                             <p className="text-xs text-muted-foreground text-center">
                               Max file size: 10MB<br />
@@ -588,6 +675,13 @@ const Complaints = () => {
                                       alt="Preview" 
                                       className="max-h-[150px] object-contain mx-auto"
                                     />
+                                  </div>
+                                )}
+                                
+                                {extractedContent && (
+                                  <div className="mt-4 p-3 bg-muted rounded text-left">
+                                    <p className="text-sm font-medium mb-1">AI analysis of content:</p>
+                                    <p className="text-sm">{extractedContent}</p>
                                   </div>
                                 )}
                               </div>
@@ -609,7 +703,7 @@ const Complaints = () => {
                   type="submit" 
                   className="w-full" 
                   onClick={handleSubmit}
-                  disabled={isSubmitting || !category}
+                  disabled={isSubmitting || !category || extractionLoading}
                 >
                   {isSubmitting ? (
                     <>
